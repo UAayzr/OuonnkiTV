@@ -23,7 +23,7 @@ export const pageVariants: Variants = {
     y: -8,
     filter: 'blur(4px)',
     transition: {
-      duration: 0.2,
+      duration: 0.25,
       ease: [0.55, 0.055, 0.675, 0.19], // ease-in-quad
     },
   },
