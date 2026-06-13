@@ -63,11 +63,9 @@ export default function Navigation({ hidden = false, enableScrollAnimation = fal
           >
             <SidebarTrigger />
             <NavLink to="/" className="flex items-center">
-              <div className="flex items-end">
-                <div>
-                  <OkiLogo />
-                </div>
-                <p className="text-accent-foreground text-lg font-bold">OUONNKI TV</p>
+              <div className="flex items-center gap-2">
+                <OkiLogo />
+                <p className="text-accent-foreground text-lg leading-none font-bold">UAayZR TV</p>
               </div>
             </NavLink>
           </NavbarBrand>

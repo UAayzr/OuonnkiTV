@@ -25,7 +25,7 @@ export default function AboutProject() {
                 <OkiLogo size={56} className="drop-shadow-sm" />
               </div>
               <div className="space-y-1">
-                <h2 className="text-xl font-semibold tracking-tight md:text-2xl">Ouonnki TV</h2>
+                <h2 className="text-xl font-semibold tracking-tight md:text-2xl">UAayZR TV</h2>
                 <p className="text-muted-foreground text-sm">
                   面向高频观影场景的流媒体聚合应用，强调连续性与模块化体验。
                 </p>
@@ -107,7 +107,7 @@ export default function AboutProject() {
       </SettingsSection>
 
       <footer className="border-border/70 text-muted-foreground mt-1 border-t pt-4 text-center text-sm">
-        © {currentYear} Ouonnki TV
+        © {currentYear} UAayZR TV
       </footer>
     </SettingsPageShell>
   )

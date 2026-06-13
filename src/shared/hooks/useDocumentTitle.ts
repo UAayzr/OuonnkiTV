@@ -3,9 +3,9 @@ import { useEffect } from 'react'
 /**
  * 自定义 Hook：动态更新页面标题
  * @param title - 页面标题（不包含站点名称）
- * @param siteName - 站点名称，默认为 'Ouonnki TV'
+ * @param siteName - 站点名称，默认为 'UAayZR TV'
  */
-export function useDocumentTitle(title: string, siteName: string = 'Ouonnki TV') {
+export function useDocumentTitle(title: string, siteName: string = 'UAayZR TV') {
   useEffect(() => {
     const previousTitle = document.title
 

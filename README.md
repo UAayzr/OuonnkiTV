@@ -1,6 +1,6 @@
 <h1 align="center">
-  <img src="https://cdn.ouonnki.com/gh/Ouonnki/blog-pictures/posts/logo.svg" alt="OuonnkiTV Logo" width="80"/><br/>
-  OuonnkiTV
+  <img src="https://cdn.ouonnki.com/gh/Ouonnki/blog-pictures/posts/logo.svg" alt="UAayZR TV Logo" width="80"/><br/>
+  UAayZR TV
 </h1>
 
 <p align="center">
