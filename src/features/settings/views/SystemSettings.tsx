@@ -18,8 +18,9 @@ export default function SystemSettings() {
   const { system, setSystemSettings } = useSettingStore()
 
   const hasEnvToken = Boolean(import.meta.env.OKI_TMDB_API_TOKEN)
-  const hasUserToken = Boolean(system.tmdbApiToken)
+  const hasUserToken = Boolean(system.tmdbApiToken.trim())
   const hasTmdbToken = hasEnvToken || hasUserToken
+  const isTmdbEnabled = system.tmdbEnabled && hasTmdbToken
   const tmdbApiBaseUrlPlaceholder = import.meta.env.OKI_TMDB_API_BASE_URL || 'https://api.themoviedb.org/3'
   const tmdbImageBaseUrlPlaceholder =
     import.meta.env.OKI_TMDB_IMAGE_BASE_URL || 'https://image.tmdb.org/t/p/'
@@ -97,7 +98,7 @@ export default function SystemSettings() {
           controlClassName="self-end mt-1"
           control={
             <Switch
-              checked={system.tmdbEnabled}
+              checked={isTmdbEnabled}
               disabled={!hasTmdbToken}
               onCheckedChange={checked => setSystemSettings({ tmdbEnabled: checked })}
             />
@@ -135,7 +136,7 @@ export default function SystemSettings() {
             </div>
           }
         />
-        {system.tmdbEnabled && (
+        {isTmdbEnabled && (
           <>
             <SettingsItem
               title="TMDB 内容语言"

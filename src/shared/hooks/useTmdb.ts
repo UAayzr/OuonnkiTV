@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppendToResponseMovieKey, AppendToResponseTvKey } from 'tmdb-ts'
 import { useTmdbStore } from '../store/tmdbStore'
-import { getTmdbClient, normalizeToMediaItem } from '../lib/tmdb'
+import { getTmdbClient, hasTmdbApiToken, normalizeToMediaItem } from '../lib/tmdb'
 import { useSettingStore } from '../store/settingStore'
 import type { TmdbMediaType, TmdbMovieDetail, TmdbTvDetail } from '../types/tmdb'
 
@@ -320,12 +320,18 @@ export function useTmdbDetail<T extends TmdbMovieDetail | TmdbTvDetail>(
 
   const fetchDetail = useCallback(async () => {
     if (!id) return
+    if (!hasTmdbApiToken()) {
+      setDetail(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
 
     setLoading(true)
     setError(null)
-    const client = getTmdbClient()
 
     try {
+      const client = getTmdbClient()
       let data: unknown
       const movieAppendToResponse: AppendToResponseMovieKey[] = [
         'credits',

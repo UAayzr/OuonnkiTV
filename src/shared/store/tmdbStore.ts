@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
-import { getTmdbClient, normalizeToMediaItem } from '../lib/tmdb'
+import { getTmdbClient, hasTmdbApiToken, normalizeToMediaItem } from '../lib/tmdb'
 import { useSettingStore } from './settingStore'
 import type {
   TmdbMediaItem,
@@ -111,6 +111,10 @@ const INITIAL_FILTER: TmdbFilterOptions = {
 // 仅允许最新一次 TMDB 搜索写回结果，避免竞态导致旧结果覆盖新结果
 let latestSearchRequestId = 0
 
+function getOptionalTmdbClient() {
+  return hasTmdbApiToken() ? getTmdbClient() : null
+}
+
 export const useTmdbStore = create<TmdbState & TmdbActions>()(
   devtools(
     immer((set, get) => ({
@@ -167,7 +171,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // Actions
       fetchGenresAndCountries: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         const currentLang = getTmdbLanguage()
         // 仅在语言未变且已缓存时跳过
         if (get().movieGenres.length > 0 && get().genresLanguage === currentLang) return
@@ -203,7 +208,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       search: async (query: string, page = 1) => {
         const requestId = ++latestSearchRequestId
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.searchQuery = query
           state.loading.search = true
@@ -254,7 +260,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
       },
 
       fetchDiscover: async (page = 1) => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         const { filterOptions } = get()
 
         set(state => {
@@ -369,7 +376,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
       },
 
       fetchNowPlaying: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.nowPlaying = true
         })
@@ -400,7 +408,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // 电影：最受欢迎
       fetchPopularMovies: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.popularMovies = true
         })
@@ -423,7 +432,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // 电影：口碑最佳
       fetchTopRatedMovies: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.topRatedMovies = true
         })
@@ -446,7 +456,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // 电影：即将上映
       fetchUpcomingMovies: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.upcomingMovies = true
         })
@@ -469,7 +480,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // 剧集：最受欢迎
       fetchPopularTv: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.popularTv = true
         })
@@ -492,7 +504,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // 剧集：口碑最佳
       fetchTopRatedTv: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.topRatedTv = true
         })
@@ -515,7 +528,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // 剧集：今日播出
       fetchAiringTodayTv: async () => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.airingTodayTv = true
         })
@@ -537,7 +551,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
       },
 
       fetchTrending: async (timeWindow = 'day') => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         set(state => {
           state.loading.trending = true
         })
@@ -600,7 +615,8 @@ export const useTmdbStore = create<TmdbState & TmdbActions>()(
 
       // 推荐：根据指定的 movie/tv 获取推荐列表
       fetchRecommendations: async (id: number, mediaType: 'movie' | 'tv') => {
-        const client = getTmdbClient()
+        const client = getOptionalTmdbClient()
+        if (!client) return
         const { recommendationSourceId, recommendationSourceMediaType } = get()
 
         // 如果推荐来源未变化，不重新获取

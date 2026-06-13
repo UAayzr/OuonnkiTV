@@ -6,6 +6,7 @@ const { multiMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/shared/lib/tmdb', () => ({
+  hasTmdbApiToken: () => true,
   getTmdbClient: () => ({
     search: {
       multi: multiMock,

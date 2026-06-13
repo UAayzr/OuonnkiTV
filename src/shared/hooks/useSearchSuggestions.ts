@@ -58,6 +58,14 @@ export function useSearchSuggestions(): UseSearchSuggestionsReturn {
     debounceTimerRef.current = setTimeout(async () => {
       const currentRequestId = ++requestIdRef.current
 
+      if (!isTmdbEnabled()) {
+        if (currentRequestId === requestIdRef.current) {
+          setSuggestions([])
+          setIsLoading(false)
+        }
+        return
+      }
+
       try {
         const client = getTmdbClient()
         const res = await client.search.multi({
@@ -82,7 +90,9 @@ export function useSearchSuggestions(): UseSearchSuggestionsReturn {
 
         setSuggestions(results)
       } catch (error) {
-        console.error('Failed to fetch search suggestions:', error)
+        if (!String(error instanceof Error ? error.message : error).includes('TMDB API Token 未配置')) {
+          console.error('Failed to fetch search suggestions:', error)
+        }
         // 静默失败，不影响用户体验
         if (currentRequestId === requestIdRef.current) {
           setSuggestions([])

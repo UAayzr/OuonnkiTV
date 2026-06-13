@@ -135,6 +135,10 @@ function resolveTmdbToken(): string | undefined {
   return undefined
 }
 
+export function hasTmdbApiToken(): boolean {
+  return Boolean(resolveTmdbToken())
+}
+
 export function getTmdbClient(): TMDB {
   const token = resolveTmdbToken()
   if (!token) {
