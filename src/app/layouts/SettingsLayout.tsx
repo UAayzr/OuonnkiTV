@@ -3,7 +3,7 @@ import { cn } from '@/shared/lib'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { ArrowLeft, Compass, FolderCog, Info, ListVideo, Play, Settings2 } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { CustomAnimatedOutlet } from '@/shared/components/AnimatedOutlet'
 import { animationPresets } from '@/shared/lib/animationVariants'
 import { UnderlineTabs } from '@/shared/components/common/UnderlineTabs'
@@ -134,48 +134,45 @@ export default function SettingsLayout() {
       </header>
 
       <main className="w-full px-0 pt-2 md:px-4 md:pt-4">
-        <AnimatePresence initial={false} mode="wait">
-          {activeModule.showGuide !== false ? (
-            <motion.section
-              key={`guide-${activeModule.id}`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
-              className="from-muted/35 to-muted/20 border-border/70 mb-4 rounded-xl border border-dashed bg-gradient-to-r px-3 py-2.5 md:px-4 md:py-3"
-            >
-              <div className="flex items-start gap-2.5 md:gap-3">
-                <div className="bg-background text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg border md:size-8">
-                  <Compass className={cn('size-3.5 md:size-4', activeModule.iconClass)} />
-                </div>
+        {activeModule.showGuide !== false ? (
+          <motion.section
+            key={`guide-${activeModule.id}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+            className="from-muted/35 to-muted/20 border-border/70 mb-4 rounded-xl border border-dashed bg-gradient-to-r px-3 py-2.5 md:px-4 md:py-3"
+          >
+            <div className="flex items-start gap-2.5 md:gap-3">
+              <div className="bg-background text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg border md:size-8">
+                <Compass className={cn('size-3.5 md:size-4', activeModule.iconClass)} />
+              </div>
 
-                <div className="min-w-0 flex-1 space-y-1.5 md:space-y-2">
-                  <p className="text-muted-foreground hidden text-[11px] font-medium tracking-wide uppercase md:block">
-                    模块导览
-                  </p>
-                  <h2 className="text-sm font-semibold md:text-lg">{activeModule.name}</h2>
-                  <p className="text-muted-foreground line-clamp-2 text-xs md:line-clamp-none md:text-sm">
-                    {activeModule.description}
-                  </p>
-                  <p className="text-muted-foreground text-[11px] md:hidden">
-                    {activeModule.badges.slice(0, 2).join(' · ')}
-                  </p>
-                  <div className="hidden flex-wrap gap-1.5 md:flex">
-                    {activeModule.badges.map(label => (
-                      <Badge
-                        key={label}
-                        variant="outline"
-                        className={cn('font-normal', activeModule.badgeClass)}
-                      >
-                        {label}
-                      </Badge>
-                    ))}
-                  </div>
+              <div className="min-w-0 flex-1 space-y-1.5 md:space-y-2">
+                <p className="text-muted-foreground hidden text-[11px] font-medium tracking-wide uppercase md:block">
+                  模块导览
+                </p>
+                <h2 className="text-sm font-semibold md:text-lg">{activeModule.name}</h2>
+                <p className="text-muted-foreground line-clamp-2 text-xs md:line-clamp-none md:text-sm">
+                  {activeModule.description}
+                </p>
+                <p className="text-muted-foreground text-[11px] md:hidden">
+                  {activeModule.badges.slice(0, 2).join(' · ')}
+                </p>
+                <div className="hidden flex-wrap gap-1.5 md:flex">
+                  {activeModule.badges.map(label => (
+                    <Badge
+                      key={label}
+                      variant="outline"
+                      className={cn('font-normal', activeModule.badgeClass)}
+                    >
+                      {label}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-            </motion.section>
-          ) : null}
-        </AnimatePresence>
+            </div>
+          </motion.section>
+        ) : null}
 
         <CustomAnimatedOutlet variants={animationPresets.slideX} />
       </main>

@@ -1,5 +1,5 @@
 import { useLocation, useOutlet } from 'react-router'
-import { AnimatePresence, motion, type Variants } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { useDeferredValue, useRef } from 'react'
 import { pageVariants } from '@/shared/lib/animationVariants'
 
@@ -8,13 +8,13 @@ import { resolveAnimationKey, type RouteKey } from './animatedOutletKey'
 /**
  * AnimatedOutlet - 带页面过渡动画的 Outlet 包装组件
  *
- * 使用 framer-motion 的 AnimatePresence 实现路由切换时的平滑过渡动画。
- * 动画效果：淡入淡出 + 轻微的垂直位移 + 模糊效果
+ * 使用 framer-motion 实现路由进入动画。
+ * 动画效果：淡入 + 轻微的垂直位移 + 模糊效果
  *
  * 通过 useDeferredValue 把动画 key 解耦于实时 pathname：当目标路由仍处于
- * Suspense fallback 阶段时，deferred 值不会推进，AnimatePresence 因此不会
- * 启动 exit/enter 序列，从根上避免「lazy chunk 加载中再切下一路由」造成
- * 的 DOM 失步崩溃。
+ * Suspense fallback 阶段时，deferred 值不会推进，内容也继续显示旧 outlet。
+ * 这里不再使用路由级 exit 动画，避免旧路由 DOM 被 AnimatePresence 延迟卸载时
+ * 与 React commit 删除阶段发生 removeChild 竞态。
  */
 export default function AnimatedOutlet() {
   const location = useLocation()
@@ -29,20 +29,18 @@ export default function AnimatedOutlet() {
   if (outlet && isReady) {
     outletRef.current = outlet
   }
+  const displayedOutlet = isReady ? outlet : outletRef.current
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={deferredPathname}
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="h-full"
-      >
-        {outlet || outletRef.current}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={deferredPathname}
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      className="h-full"
+    >
+      {displayedOutlet}
+    </motion.div>
   )
 }
 
@@ -75,26 +73,24 @@ export function CustomAnimatedOutlet({
   if (outlet && isReady) {
     outletRef.current = outlet
   }
+  const displayedOutlet = isReady ? outlet : outletRef.current
 
   // 如果禁用动画，直接返回 outlet
   if (!enabled) {
-    return <>{outlet || outletRef.current}</>
+    return <>{displayedOutlet}</>
   }
 
   const animationKey = resolveAnimationKey(deferredPathname, routeKey)
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={animationKey}
-        variants={variants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className={className}
-      >
-        {outlet || outletRef.current}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={animationKey}
+      variants={variants}
+      initial="initial"
+      animate="animate"
+      className={className}
+    >
+      {displayedOutlet}
+    </motion.div>
   )
 }
