@@ -1,4 +1,5 @@
 import type {
+  VideoItem,
   VideoSource,
   DetailResult,
   VideoDetail,
@@ -9,6 +10,11 @@ import type {
 import { DEFAULT_M3U8_PATTERN } from '../types'
 import { buildDetailUrl } from '../utils/url'
 import { parsePlayUrl, extractM3u8FromContent } from './parser'
+import { parseJsonResponse } from './response'
+
+interface CmsVideoDetailItem extends VideoItem {
+  vod_play_from?: string
+}
 
 /**
  * 详情获取配置
@@ -80,7 +86,15 @@ export async function getVideoDetail(
       }
     }
 
-    const data = await response.json()
+    const { data, error } = await parseJsonResponse<{ list?: CmsVideoDetailItem[] }>(response)
+
+    if (error) {
+      return {
+        success: false,
+        episodes: [],
+        error,
+      }
+    }
 
     if (!data || !data.list || !Array.isArray(data.list) || data.list.length === 0) {
       return {
@@ -93,7 +107,7 @@ export async function getVideoDetail(
     const videoDetail = data.list[0]
 
     // 解析播放地址
-    let parsedEpisodes = parsePlayUrl(videoDetail.vod_play_url, videoDetail.vod_play_from)
+    let parsedEpisodes = parsePlayUrl(videoDetail.vod_play_url ?? '', videoDetail.vod_play_from)
 
     // 如果没有找到播放地址，尝试从内容中提取
     if (parsedEpisodes.urls.length === 0 && videoDetail.vod_content) {
@@ -126,7 +140,6 @@ export async function getVideoDetail(
       videoInfo,
     }
   } catch (error) {
-    console.error('详情获取错误:', error)
     return {
       success: false,
       episodes: [],

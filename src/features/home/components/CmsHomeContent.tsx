@@ -6,13 +6,17 @@ import { CmsMediaCarousel } from './CmsMediaCarousel'
 import { NavLink } from 'react-router'
 import { Settings, Plus } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
+import { useMemo } from 'react'
+
+const HOME_SOURCE_LIMIT = 6
 
 /**
  * 单个视频源推荐列表
  * 独立组件以隔离每个源的 hook 调用
  */
 function SourceCarousel({ source }: { source: VideoSource }) {
-  const { items, loading } = useCmsVideoList(source)
+  const sourceWithoutRetry = useMemo(() => ({ ...source, retry: 0 }), [source])
+  const { items, loading } = useCmsVideoList(sourceWithoutRetry)
 
   return (
     <CmsMediaCarousel
@@ -53,7 +57,11 @@ function EmptySourceState() {
  * 当 TMDB 未启用时作为首页内容展示
  */
 export function CmsHomeContent() {
-  const videoAPIs = useApiStore(state => state.videoAPIs)
+  const allVideoAPIs = useApiStore(state => state.videoAPIs)
+  const videoAPIs = useMemo(
+    () => allVideoAPIs.filter(source => source.isEnabled).slice(0, HOME_SOURCE_LIMIT),
+    [allVideoAPIs],
+  )
 
   return (
     <div className="flex flex-col gap-6">

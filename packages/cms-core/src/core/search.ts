@@ -9,6 +9,7 @@ import type {
 } from '../types'
 
 import { buildSearchUrl } from '../utils/url'
+import { parseJsonResponse } from './response'
 
 /**
  * 搜索配置
@@ -67,7 +68,15 @@ export async function searchVideos(
       }
     }
 
-    const data = await response.json()
+    const { data, error } = await parseJsonResponse<{ list?: VideoItem[]; page?: number | string; pagecount?: number | string; total?: number | string }>(response)
+
+    if (error) {
+      return {
+        success: false,
+        items: [],
+        error,
+      }
+    }
 
     if (!data || !Array.isArray(data.list)) {
       return {
@@ -98,7 +107,6 @@ export async function searchVideos(
       pagination,
     }
   } catch (error) {
-    console.error('搜索错误:', error)
     return {
       success: false,
       items: [],

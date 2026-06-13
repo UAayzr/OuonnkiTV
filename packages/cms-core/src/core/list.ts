@@ -8,6 +8,7 @@ import type {
 } from '../types'
 
 import { buildListUrl } from '../utils/url'
+import { parseJsonResponse } from './response'
 
 /**
  * 列表请求配置
@@ -60,7 +61,15 @@ export async function listVideos(
       }
     }
 
-    const data = await response.json()
+    const { data, error } = await parseJsonResponse<{ list?: VideoItem[]; page?: number | string; pagecount?: number | string; total?: number | string }>(response)
+
+    if (error) {
+      return {
+        success: false,
+        items: [],
+        error,
+      }
+    }
 
     if (!data || !Array.isArray(data.list)) {
       return {
@@ -91,7 +100,6 @@ export async function listVideos(
       pagination,
     }
   } catch (error) {
-    console.error('列表请求错误:', error)
     return {
       success: false,
       items: [],
