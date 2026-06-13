@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AppendToResponseMovieKey, AppendToResponseTvKey } from 'tmdb-ts'
 import { useTmdbStore } from '../store/tmdbStore'
-import { getTmdbClient, hasTmdbApiToken, normalizeToMediaItem } from '../lib/tmdb'
+import { getTmdbClient, normalizeToMediaItem } from '../lib/tmdb'
+import { isTmdbEnabled } from './useTmdbMode'
 import { useSettingStore } from '../store/settingStore'
 import type { TmdbMediaType, TmdbMovieDetail, TmdbTvDetail } from '../types/tmdb'
 
@@ -320,7 +321,7 @@ export function useTmdbDetail<T extends TmdbMovieDetail | TmdbTvDetail>(
 
   const fetchDetail = useCallback(async () => {
     if (!id) return
-    if (!hasTmdbApiToken()) {
+    if (!isTmdbEnabled()) {
       setDetail(null)
       setLoading(false)
       setError(null)

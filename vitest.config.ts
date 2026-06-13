@@ -8,6 +8,7 @@ export default mergeConfig(
       environment: 'jsdom',
       globals: true,
       include: ['src/**/*.test.ts'],
+      setupFiles: ['./vitest.setup.ts'],
       clearMocks: true,
       restoreMocks: true,
     },

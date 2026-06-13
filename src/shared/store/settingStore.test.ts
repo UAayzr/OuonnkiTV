@@ -256,4 +256,24 @@ describe('settingStore migrate', () => {
 
     expect(migrated.playback.isFullscreenProgressHidden).toBe(true)
   })
+
+  it('v13 -> v14 会默认关闭 TMDB 智能模式', async () => {
+    const migrate = useSettingStore.persist.getOptions().migrate
+
+    const legacyState = {
+      network: DEFAULT_SETTINGS.network,
+      search: DEFAULT_SETTINGS.search,
+      playback: DEFAULT_SETTINGS.playback,
+      system: {
+        ...DEFAULT_SETTINGS.system,
+        tmdbEnabled: true,
+      },
+    }
+
+    const migrated = (await Promise.resolve(migrate?.(legacyState, 13))) as {
+      system: { tmdbEnabled?: boolean }
+    }
+
+    expect(migrated.system.tmdbEnabled).toBe(false)
+  })
 })

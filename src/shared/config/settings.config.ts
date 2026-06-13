@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS = {
     isFullscreenProgressHidden: envSettings?.playback?.isFullscreenProgressHidden ?? false,
   },
   system: {
-    tmdbEnabled: envSettings?.system?.tmdbEnabled ?? Boolean(import.meta.env.OKI_TMDB_API_TOKEN),
+    tmdbEnabled: envSettings?.system?.tmdbEnabled ?? false,
     tmdbApiToken: '',
     tmdbApiBaseUrl:
       envSettings?.system?.tmdbApiBaseUrl ??

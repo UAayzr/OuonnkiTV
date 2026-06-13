@@ -2,7 +2,7 @@ import { useSettingStore } from '@/shared/store/settingStore'
 import { hasTmdbApiToken } from '@/shared/lib/tmdb'
 
 function hasConfiguredTmdbToken(userToken: string): boolean {
-  return Boolean(userToken || import.meta.env.OKI_TMDB_API_TOKEN)
+  return Boolean(userToken.trim() || import.meta.env.OKI_TMDB_API_TOKEN)
 }
 
 /** 获取当前 TMDB 模式是否启用（React hook） */

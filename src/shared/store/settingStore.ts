@@ -121,7 +121,7 @@ export const useSettingStore = create<SettingStore>()(
       })),
       {
         name: 'ouonnki-tv-setting-store',
-        version: 13,
+        version: 14,
         migrate: (persistedState: unknown, version: number) => {
           const state = persistedState as Record<string, unknown>
           if (version < 2 && state.playback) {
@@ -202,6 +202,11 @@ export const useSettingStore = create<SettingStore>()(
             const playback = (state.playback ?? {}) as Record<string, unknown>
             playback.isFullscreenProgressHidden ??= DEFAULT_SETTINGS.playback.isFullscreenProgressHidden
             state.playback = playback
+          }
+          if (version < 14) {
+            const system = (state.system ?? {}) as Record<string, unknown>
+            system.tmdbEnabled = false
+            state.system = system
           }
           return state
         },

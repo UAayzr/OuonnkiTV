@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
-import { getTmdbClient, hasTmdbApiToken, normalizeToMediaItem } from '../lib/tmdb'
+import { getTmdbClient, normalizeToMediaItem } from '../lib/tmdb'
+import { isTmdbEnabled } from '../hooks/useTmdbMode'
 import { useSettingStore } from './settingStore'
 import type {
   TmdbMediaItem,
@@ -112,7 +113,7 @@ const INITIAL_FILTER: TmdbFilterOptions = {
 let latestSearchRequestId = 0
 
 function getOptionalTmdbClient() {
-  return hasTmdbApiToken() ? getTmdbClient() : null
+  return isTmdbEnabled() ? getTmdbClient() : null
 }
 
 export const useTmdbStore = create<TmdbState & TmdbActions>()(

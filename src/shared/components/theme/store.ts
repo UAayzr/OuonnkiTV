@@ -50,19 +50,21 @@ export const useThemeStore = create<ThemeStore>()(
       })),
       {
         name: 'ouonnki-tv-theme-store',
-        version: 2,
-        migrate: persistedState => {
+        version: 3,
+        migrate: (persistedState, version) => {
           const state =
             persistedState && typeof persistedState === 'object'
               ? (persistedState as Partial<ThemeState>)
               : {}
+          const colorTheme =
+            version < 3 && state.colorTheme === 'default'
+              ? DEFAULT_THEME.colorTheme
+              : state.colorTheme
 
           return {
             ...DEFAULT_THEME,
             ...state,
-            colorTheme: isColorTheme(state.colorTheme)
-              ? state.colorTheme
-              : DEFAULT_THEME.colorTheme,
+            colorTheme: isColorTheme(colorTheme) ? colorTheme : DEFAULT_THEME.colorTheme,
           }
         },
       },

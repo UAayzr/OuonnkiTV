@@ -31,6 +31,10 @@ vi.mock('@/shared/lib/tmdb', () => ({
   }),
 }))
 
+vi.mock('@/shared/hooks/useTmdbMode', () => ({
+  isTmdbEnabled: () => true,
+}))
+
 import { useTmdbStore } from './tmdbStore'
 
 function createDeferred<T>() {

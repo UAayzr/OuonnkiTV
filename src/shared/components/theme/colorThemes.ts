@@ -35,7 +35,7 @@ export const COLOR_THEME_OPTIONS = [
 
 export type ColorTheme = (typeof COLOR_THEME_OPTIONS)[number]['value']
 
-export const DEFAULT_COLOR_THEME: ColorTheme = 'default'
+export const DEFAULT_COLOR_THEME: ColorTheme = 'sakura'
 
 const COLOR_THEME_VALUES = COLOR_THEME_OPTIONS.map(option => option.value)
 
@@ -44,5 +44,5 @@ export function isColorTheme(value: unknown): value is ColorTheme {
 }
 
 export function getColorThemeClassName(theme: ColorTheme) {
-  return theme === DEFAULT_COLOR_THEME ? null : `${COLOR_THEME_CLASS_PREFIX}${theme}`
+  return theme === 'default' ? null : `${COLOR_THEME_CLASS_PREFIX}${theme}`
 }
