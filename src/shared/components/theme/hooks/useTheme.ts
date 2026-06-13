@@ -9,7 +9,7 @@ import { useCallback } from 'react'
  */
 export function useThemeControl() {
   const { theme, setTheme, resolvedTheme, systemTheme } = useTheme()
-  const { mode, setMode } = useThemeStore()
+  const { mode, setMode, colorTheme, setColorTheme } = useThemeStore()
 
   /**
    * 切换主题模式 (带动画)
@@ -57,6 +57,7 @@ export function useThemeControl() {
   return {
     // 状态
     mode,
+    colorTheme,
     theme,
     resolvedTheme,
     systemTheme,
@@ -64,6 +65,7 @@ export function useThemeControl() {
 
     // 方法
     changeMode,
+    setColorTheme,
     toggleDarkMode,
     resetTheme: useThemeStore(state => state.resetTheme),
   }
@@ -74,6 +76,6 @@ export function useThemeControl() {
  * 配合 ThemeToggle 使用以渲染对应的图标
  */
 export function useThemeState() {
-  const { isDark, resolvedTheme, mode } = useThemeControl()
-  return { isDark, resolvedTheme, mode }
+  const { isDark, resolvedTheme, mode, colorTheme } = useThemeControl()
+  return { isDark, resolvedTheme, mode, colorTheme }
 }

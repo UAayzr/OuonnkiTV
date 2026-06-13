@@ -115,13 +115,13 @@ export default function SideBar({
                     <NavLink
                       to={item.url}
                       onClick={handleNavLinkClick}
-                      className="group data-[mactive=true]:text-sidebar-primary-foreground relative h-10 overflow-visible"
+                      className="group data-[mactive=true]:text-sidebar-primary relative h-10 overflow-visible"
                       data-mactive={location.pathname === item.url}
                     >
                       {location.pathname === item.url && (
                         <motion.div
                           layoutId="sidebar-selected-item"
-                          className="bg-sidebar-primary absolute top-0 left-0 h-full w-full rounded-md"
+                          className="bg-sidebar-primary/15 absolute top-0 left-0 h-full w-full rounded-md"
                           transition={{
                             type: 'spring',
                             stiffness: 300,

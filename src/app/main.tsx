@@ -9,6 +9,7 @@ import { ThemeProvider } from 'next-themes'
 import AppRouter from './router'
 import { Toaster } from '@/shared/components/ui/sonner'
 import { TooltipProvider } from '@/shared/components/ui/tooltip'
+import { ThemeColorProvider } from '@/shared/components/theme'
 
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
@@ -17,16 +18,18 @@ const root = document.getElementById('root')!
 
 const app = (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-    <TooltipProvider>
-      <AppRouter />
-      <Toaster richColors position="top-center" />
-      {import.meta.env.OKI_DISABLE_ANALYTICS !== 'true' && (
-        <>
-          <Analytics />
-          <SpeedInsights />
-        </>
-      )}
-    </TooltipProvider>
+    <ThemeColorProvider>
+      <TooltipProvider>
+        <AppRouter />
+        <Toaster richColors position="top-center" />
+        {import.meta.env.OKI_DISABLE_ANALYTICS !== 'true' && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
+      </TooltipProvider>
+    </ThemeColorProvider>
   </ThemeProvider>
 )
 
