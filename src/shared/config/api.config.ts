@@ -47,50 +47,69 @@ export const buildProxyRequestUrl = (targetUrl: string, proxyUrl?: string | null
 import type { VideoApi } from '@/shared/types/video'
 import { INITIAL_CONFIG } from './initialConfig'
 import { DEFAULT_SETTINGS } from './settings.config'
+import builtinSources from './builtin-sources.json'
 
-// 从环境变量获取初始视频源
+/**
+ * 获取应用内置的初始视频源。
+ *
+ * 这些源等同于「用户首次启动时已经手动添加好」的源，写入 store 后形态、
+ * 行为、删除 / 启用 / 排序逻辑均与用户自行添加的源完全一致；首次初始化
+ * 完成后用户的修改会被持久化保留，删除后不会复活。
+ */
+const getBuiltinVideoSources = (): VideoApi[] => parseVideoSources(builtinSources)
+
+// 从环境变量 + 内置 JSON 获取初始视频源
 export const getInitialVideoSources = async (): Promise<VideoApi[]> => {
-  // 1. First priority: Full JSON config from OKI_INITIAL_CONFIG
-  // 1. First priority: Full JSON config from OKI_INITIAL_CONFIG
+  // 1. 最高优先级：完整配置导入（OKI_INITIAL_CONFIG）
+  //    用户提供完整配置时，认为其期望「从零」恢复一份指定状态，
+  //    内置源不再追加，避免污染用户的导出 / 导入数据。
   if (INITIAL_CONFIG?.videoSources && Array.isArray(INITIAL_CONFIG.videoSources)) {
     return parseVideoSources(INITIAL_CONFIG.videoSources)
   }
 
-  // 2. Second priority: Specific OKI_INITIAL_VIDEO_SOURCES
-  let envSources = import.meta.env.OKI_INITIAL_VIDEO_SOURCES
+  // 2. 内置源 + 环境变量源：两者地位等同，统一交给上层 importSources 去重
+  const builtin = getBuiltinVideoSources()
+  const envSources = await loadEnvVideoSources()
+  return [...builtin, ...envSources]
+}
 
-  // 验证url
-  try {
-    new URL(envSources.trim())
-    const response = await fetch(buildProxyRequestUrl(envSources.trim()))
-    if (!response.ok) {
-      console.error(`无法获取视频源，HTTP状态: ${response.status}`)
-      return []
-    }
-    envSources = await response.text()
-  } catch {
-    // 不是URL，继续处理
-  }
+/**
+ * 解析 OKI_INITIAL_VIDEO_SOURCES（支持内联 JSON 或远程 JSON URL）。
+ * 解析失败或未配置时返回空数组，不影响内置源加载。
+ */
+const loadEnvVideoSources = async (): Promise<VideoApi[]> => {
+  let raw = import.meta.env.OKI_INITIAL_VIDEO_SOURCES
 
-  if (!envSources || typeof envSources !== 'string') {
+  if (!raw || typeof raw !== 'string') {
     return []
   }
 
+  // 若是 URL，则通过代理拉取远程 JSON 文本
   try {
-    // 清理多行JSON：移除不必要的换行符和空白字符，但保留JSON结构内的空格
-    const cleanedSources = envSources
-      .replace(/^\s*['"`]/, '') // 移除开头的引号
-      .replace(/['"`]\s*$/, '') // 移除结尾的引号
+    new URL(raw.trim())
+    const response = await fetch(buildProxyRequestUrl(raw.trim()))
+    if (!response.ok) {
+      console.error(`无法获取远程视频源，HTTP状态: ${response.status}`)
+      return []
+    }
+    raw = await response.text()
+  } catch {
+    // 不是 URL，按内联 JSON 处理
+  }
+
+  try {
+    const cleaned = raw
+      .replace(/^\s*['"`]/, '')
+      .replace(/['"`]\s*$/, '')
       .trim()
 
-    // 解析 JSON 格式
-    const jsonSources = JSON.parse(cleanedSources)
-    const sources = Array.isArray(jsonSources) ? jsonSources : [jsonSources]
+    if (!cleaned) return []
 
-    return parseVideoSources(sources)
+    const parsed = JSON.parse(cleaned)
+    return parseVideoSources(Array.isArray(parsed) ? parsed : [parsed])
   } catch (error) {
-    console.error('解析环境变量中的视频源失败:', error)
-    console.error('环境变量内容:', envSources)
+    console.error('解析 OKI_INITIAL_VIDEO_SOURCES 失败:', error)
+    console.error('环境变量内容:', raw)
     return []
   }
 }
