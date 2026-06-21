@@ -60,7 +60,6 @@ export function SearchDirectSection({ query }: SearchDirectSectionProps) {
     <div className="flex flex-col gap-6">
       <section>
         <SearchResultsGrid
-          mode="direct"
           directResults={directResults}
           loading={directLoading}
           searchProgress={searchProgress}

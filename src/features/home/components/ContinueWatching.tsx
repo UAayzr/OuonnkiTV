@@ -12,7 +12,6 @@ import { NavLink } from 'react-router'
 import { useViewingHistoryStore } from '@/shared/store'
 import { useEffect, useMemo, useState } from 'react'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
-import { useTmdbEnabled } from '@/shared/hooks/useTmdbMode'
 import { ViewingHistoryCard } from '@/shared/components/common'
 
 /**
@@ -56,13 +55,8 @@ function ContinueWatchingSkeleton() {
 export function ContinueWatching() {
   const { viewingHistory } = useViewingHistoryStore()
   const hasHydrated = useViewingHistoryStore.persist.hasHydrated()
-  const tmdbEnabled = useTmdbEnabled()
 
-  // TMDB 未启用时过滤 TMDB 记录
-  const filteredHistory = useMemo(() => {
-    if (tmdbEnabled) return viewingHistory
-    return viewingHistory.filter(item => item.recordType !== 'tmdb')
-  }, [viewingHistory, tmdbEnabled])
+  const filteredHistory = useMemo(() => viewingHistory, [viewingHistory])
 
   const isMobile = useIsMobile()
   // 根据屏幕尺寸计算可见卡片数量：移动端2个、平板3个、桌面5个

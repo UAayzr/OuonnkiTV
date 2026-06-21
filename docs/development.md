@@ -18,7 +18,6 @@
 | Zustand | 5 | 状态管理（immer + persist） |
 | React Router | 7 | 路由管理 |
 | React Hook Form + Zod | 7 / 4 | 表单验证 |
-| tmdb-ts | 2 | TMDB API 客户端 |
 | hls.js | 1 | HLS 流媒体支持 |
 | Vitest | 2 | 单元测试 |
 
@@ -72,7 +71,6 @@ OuonnkiTV/
 │  │  ├─ favorites/            # 收藏管理
 │  │  ├─ history/              # 观看历史
 │  │  ├─ home/                 # 首页
-│  │  ├─ media/                # 媒体详情
 │  │  ├─ player/               # 视频播放
 │  │  ├─ search/               # 搜索功能
 │  │  └─ settings/             # 设置管理

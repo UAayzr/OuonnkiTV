@@ -1,7 +1,6 @@
 import { useFavoritesStore } from '../store/favoritesStore'
 import type { FavoriteList, FavoriteStats } from '../types/favorites'
 import { FavoriteWatchStatus } from '../types/favorites'
-import type { TmdbMediaItem } from '@/shared/types/tmdb'
 import type { VideoItem } from '@/shared/types/video'
 import { useMemo } from 'react'
 
@@ -18,15 +17,13 @@ export const useFavorites = () => {
   const stats = useMemo<FavoriteStats>(() => {
     const result: FavoriteStats = {
       total: favorites.length,
-      tmdbCount: 0,
       cmsCount: 0,
       notWatchedCount: 0,
       watchingCount: 0,
       completedCount: 0,
     }
     favorites.forEach(f => {
-      if (f.sourceType === 'tmdb') result.tmdbCount++
-      else result.cmsCount++
+      result.cmsCount++
       switch (f.watchStatus) {
         case FavoriteWatchStatus.NOT_WATCHED:
           result.notWatchedCount++
@@ -52,7 +49,6 @@ export const useFavorites = () => {
   }, [favorites])
 
   // 基础 CRUD 方法
-  const addTmdbFavorite = useFavoritesStore(state => state.addTmdbFavorite)
   const addCmsFavorite = useFavoritesStore(state => state.addCmsFavorite)
   const addFavorites = useFavoritesStore(state => state.addFavorites)
   const removeFavorite = useFavoritesStore(state => state.removeFavorite)
@@ -73,11 +69,8 @@ export const useFavorites = () => {
   const setSelectedIds = useFavoritesStore(state => state.setSelectedIds)
 
   // 查询方法
-  const isTmdbFavorited = useFavoritesStore(state => state.isTmdbFavorited)
   const isCmsFavorited = useFavoritesStore(state => state.isCmsFavorited)
-  const getTmdbFavorite = useFavoritesStore(state => state.getTmdbFavorite)
   const getCmsFavorite = useFavoritesStore(state => state.getCmsFavorite)
-  const toggleTmdbFavorite = useFavoritesStore(state => state.toggleTmdbFavorite)
   const toggleCmsFavorite = useFavoritesStore(state => state.toggleCmsFavorite)
 
   // 筛选方法
@@ -87,23 +80,15 @@ export const useFavorites = () => {
   /**
    * 检查是否已收藏 (统一接口)
    */
-  const isFavorited = (item: TmdbMediaItem | VideoItem): boolean => {
-    if ('mediaType' in item) {
-      return isTmdbFavorited(item.id, item.mediaType)
-    } else {
-      return isCmsFavorited(item.vod_id, item.source_code || '')
-    }
+  const isFavorited = (item: VideoItem): boolean => {
+    return isCmsFavorited(item.vod_id, item.source_code || '')
   }
 
   /**
    * 切换收藏状态 (统一接口)
    */
-  const toggleFavorite = (item: TmdbMediaItem | VideoItem): void => {
-    if ('mediaType' in item) {
-      toggleTmdbFavorite(item)
-    } else {
-      toggleCmsFavorite(item)
-    }
+  const toggleFavorite = (item: VideoItem): void => {
+    toggleCmsFavorite(item)
   }
 
   /**
@@ -135,24 +120,6 @@ export const useFavorites = () => {
     }
   }
 
-  /**
-   * 按来源分组收藏项
-   */
-  const groupBySource = (): { tmdb: FavoriteList; cms: FavoriteList } => {
-    const tmdb: FavoriteList = []
-    const cms: FavoriteList = []
-
-    favorites.forEach(f => {
-      if (f.sourceType === 'tmdb') {
-        tmdb.push(f)
-      } else {
-        cms.push(f)
-      }
-    })
-
-    return { tmdb, cms }
-  }
-
   return {
     // 状态
     favorites,
@@ -162,7 +129,6 @@ export const useFavorites = () => {
     allTags,
 
     // 基础 CRUD
-    addTmdbFavorite,
     addCmsFavorite,
     addFavorites,
     removeFavorite,
@@ -178,12 +144,9 @@ export const useFavorites = () => {
     removeTag,
 
     // 查询
-    isTmdbFavorited,
     isCmsFavorited,
     isFavorited,
-    getTmdbFavorite,
     getCmsFavorite,
-    toggleTmdbFavorite,
     toggleCmsFavorite,
     toggleFavorite,
 
@@ -198,7 +161,6 @@ export const useFavorites = () => {
 
     // 分组
     groupByStatus,
-    groupBySource,
   }
 }
 
@@ -207,25 +169,15 @@ export const useFavorites = () => {
  * 适用于组件中简单的收藏按钮
  */
 export const useFavoriteToggle = () => {
-  const isTmdbFavorited = useFavoritesStore(state => state.isTmdbFavorited)
   const isCmsFavorited = useFavoritesStore(state => state.isCmsFavorited)
-  const toggleTmdbFavorite = useFavoritesStore(state => state.toggleTmdbFavorite)
   const toggleCmsFavorite = useFavoritesStore(state => state.toggleCmsFavorite)
 
-  const isFavorited = (item: TmdbMediaItem | VideoItem): boolean => {
-    if ('mediaType' in item) {
-      return isTmdbFavorited(item.id, item.mediaType)
-    } else {
-      return isCmsFavorited(item.vod_id, item.source_code || '')
-    }
+  const isFavorited = (item: VideoItem): boolean => {
+    return isCmsFavorited(item.vod_id, item.source_code || '')
   }
 
-  const toggleFavorite = (item: TmdbMediaItem | VideoItem): void => {
-    if ('mediaType' in item) {
-      toggleTmdbFavorite(item)
-    } else {
-      toggleCmsFavorite(item)
-    }
+  const toggleFavorite = (item: VideoItem): void => {
+    toggleCmsFavorite(item)
   }
 
   return {

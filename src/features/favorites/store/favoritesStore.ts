@@ -3,8 +3,7 @@ import { devtools, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { FavoriteItem, FavoriteList, FavoriteFilterOptions, FavoriteStats } from '../types/favorites'
 import { FavoriteWatchStatus } from '../types/favorites'
-import type { TmdbFavoriteItem, CmsFavoriteItem } from '../types/favorites'
-import type { TmdbMediaItem } from '@/shared/types/tmdb'
+import type { CmsFavoriteItem } from '../types/favorites'
 import type { VideoItem } from '@/shared/types/video'
 
 interface FavoritesState {
@@ -21,14 +20,11 @@ interface FavoritesState {
 interface FavoritesActions {
   // === 基础 CRUD ===
 
-  /** 添加 TMDB 媒体到收藏 */
-  addTmdbFavorite: (media: TmdbMediaItem, watchStatus?: FavoriteWatchStatus) => void
-
   /** 添加 CMS 视频到收藏 */
   addCmsFavorite: (video: VideoItem, watchStatus?: FavoriteWatchStatus) => void
 
   /** 批量添加收藏 (去重) */
-  addFavorites: (items: (TmdbMediaItem | VideoItem)[]) => void
+  addFavorites: (items: VideoItem[]) => void
 
   /** 删除收藏项 */
   removeFavorite: (id: string) => void
@@ -61,20 +57,11 @@ interface FavoritesActions {
 
   // === 查询 ===
 
-  /** 检查是否已收藏 (TMDB) */
-  isTmdbFavorited: (tmdbId: number, mediaType: 'movie' | 'tv') => boolean
-
   /** 检查是否已收藏 (CMS) */
   isCmsFavorited: (vodId: string, sourceCode: string) => boolean
 
-  /** 获取收藏项 (TMDB) */
-  getTmdbFavorite: (tmdbId: number, mediaType: 'movie' | 'tv') => TmdbFavoriteItem | undefined
-
   /** 获取收藏项 (CMS) */
   getCmsFavorite: (vodId: string, sourceCode: string) => CmsFavoriteItem | undefined
-
-  /** 切换收藏状态 (有则删除，无则添加) */
-  toggleTmdbFavorite: (media: TmdbMediaItem) => void
 
   /** 切换收藏状态 (CMS) */
   toggleCmsFavorite: (video: VideoItem) => void
@@ -113,13 +100,6 @@ interface FavoritesActions {
 type FavoritesStore = FavoritesState & FavoritesActions
 
 /**
- * 生成 TMDB 收藏项的唯一标识
- */
-function generateTmdbFavoriteId(tmdbId: number, mediaType: 'movie' | 'tv'): string {
-  return `tmdb_${mediaType}_${tmdbId}`
-}
-
-/**
  * 生成 CMS 收藏项的唯一标识
  */
 function utf8ToBase64(value: string): string {
@@ -136,22 +116,6 @@ function utf8ToBase64(value: string): string {
 function generateCmsFavoriteId(vodId: string, sourceCode: string): string {
   const combined = `${sourceCode}::${vodId}`
   return `cms_${utf8ToBase64(combined)}`
-}
-
-/**
- * 从 TmdbMediaItem 创建轻量化媒体快照
- */
-function createTmdbMediaSnapshot(media: TmdbMediaItem): TmdbFavoriteItem['media'] {
-  return {
-    id: media.id,
-    mediaType: media.mediaType,
-    title: media.title,
-    originalTitle: media.originalTitle,
-    posterPath: media.posterPath,
-    backdropPath: media.backdropPath,
-    releaseDate: media.releaseDate,
-    voteAverage: media.voteAverage,
-  }
 }
 
 /**
@@ -172,21 +136,18 @@ function createCmsMediaSnapshot(video: VideoItem): CmsFavoriteItem['media'] {
 
 /** 获取收藏项标题（用于名称排序） */
 function getFavoriteTitle(item: FavoriteItem): string {
-  return item.sourceType === 'tmdb' ? item.media.title : item.media.vodName
+  return item.media.vodName
 }
 
 /** 获取收藏项评分（排序值） */
 function getFavoriteRatingValue(item: FavoriteItem): number {
   if (item.rating !== undefined) return item.rating
-  if (item.sourceType === 'tmdb') return item.media.voteAverage ?? 0
   return 0
 }
 
 /** 获取收藏项上映日期时间戳（排序值） */
 function getFavoriteReleaseDateValue(item: FavoriteItem): number {
-  if (item.sourceType !== 'tmdb' || !item.media.releaseDate) return 0
-  const timestamp = new Date(item.media.releaseDate).getTime()
-  return Number.isNaN(timestamp) ? 0 : timestamp
+  return Number.parseInt(item.media.vodYear || '0', 10) || 0
 }
 
 export const useFavoritesStore = create<FavoritesStore>()(
@@ -205,38 +166,6 @@ export const useFavoritesStore = create<FavoritesStore>()(
         selectedIds: new Set<string>(),
 
         // === 基础 CRUD 实现 ===
-
-        addTmdbFavorite: (media: TmdbMediaItem, watchStatus?: FavoriteWatchStatus) => {
-          set(state => {
-            const existingId = generateTmdbFavoriteId(media.id, media.mediaType)
-            const existingIndex = state.favorites.findIndex(f => f.id === existingId)
-
-            const newFavorite: TmdbFavoriteItem = {
-              id: existingId,
-              addedAt: Date.now(),
-              updatedAt: Date.now(),
-              sourceType: 'tmdb',
-              watchStatus: watchStatus ?? FavoriteWatchStatus.NOT_WATCHED,
-              tags: [],
-              media: createTmdbMediaSnapshot(media),
-            }
-
-            if (existingIndex !== -1) {
-              // 更新现有收藏（保留用户数据）
-              const existing = state.favorites[existingIndex] as TmdbFavoriteItem
-              state.favorites[existingIndex] = {
-                ...existing,
-                updatedAt: Date.now(),
-                media: createTmdbMediaSnapshot(media), // 更新媒体数据
-              }
-            } else {
-              // 添加到列表开头
-              state.favorites.unshift(newFavorite)
-            }
-          })
-          // 在 set 外部调用 _applyFilters
-          get()._applyFilters()
-        },
 
         addCmsFavorite: (video: VideoItem, watchStatus?: FavoriteWatchStatus) => {
           set(state => {
@@ -270,40 +199,22 @@ export const useFavoritesStore = create<FavoritesStore>()(
           get()._applyFilters()
         },
 
-        addFavorites: (items: (TmdbMediaItem | VideoItem)[]) => {
+        addFavorites: (items: VideoItem[]) => {
           set(state => {
             items.forEach(item => {
-              if ('mediaType' in item) {
-                // TMDB item
-                const existingId = generateTmdbFavoriteId(item.id, item.mediaType)
-                if (!state.favorites.find(f => f.id === existingId)) {
-                  const newFavorite: TmdbFavoriteItem = {
-                    id: existingId,
-                    addedAt: Date.now(),
-                    updatedAt: Date.now(),
-                    sourceType: 'tmdb',
-                    watchStatus: FavoriteWatchStatus.NOT_WATCHED,
-                    tags: [],
-                    media: createTmdbMediaSnapshot(item),
-                  }
-                  state.favorites.push(newFavorite)
+              const sourceCode = item.source_code || ''
+              const existingId = generateCmsFavoriteId(item.vod_id, sourceCode)
+              if (!state.favorites.find(f => f.id === existingId)) {
+                const newFavorite: CmsFavoriteItem = {
+                  id: existingId,
+                  addedAt: Date.now(),
+                  updatedAt: Date.now(),
+                  sourceType: 'cms',
+                  watchStatus: FavoriteWatchStatus.NOT_WATCHED,
+                  tags: [],
+                  media: createCmsMediaSnapshot(item),
                 }
-              } else {
-                // CMS item
-                const sourceCode = item.source_code || ''
-                const existingId = generateCmsFavoriteId(item.vod_id, sourceCode)
-                if (!state.favorites.find(f => f.id === existingId)) {
-                  const newFavorite: CmsFavoriteItem = {
-                    id: existingId,
-                    addedAt: Date.now(),
-                    updatedAt: Date.now(),
-                    sourceType: 'cms',
-                    watchStatus: FavoriteWatchStatus.NOT_WATCHED,
-                    tags: [],
-                    media: createCmsMediaSnapshot(item),
-                  }
-                  state.favorites.push(newFavorite)
-                }
+                state.favorites.push(newFavorite)
               }
             })
 
@@ -408,35 +319,14 @@ export const useFavoritesStore = create<FavoritesStore>()(
 
         // === 查询实现 ===
 
-        isTmdbFavorited: (tmdbId: number, mediaType: 'movie' | 'tv') => {
-          const id = generateTmdbFavoriteId(tmdbId, mediaType)
-          return get().favorites.some(f => f.id === id)
-        },
-
         isCmsFavorited: (vodId: string, sourceCode: string) => {
           const id = generateCmsFavoriteId(vodId, sourceCode)
           return get().favorites.some(f => f.id === id)
         },
 
-        getTmdbFavorite: (tmdbId: number, mediaType: 'movie' | 'tv') => {
-          const id = generateTmdbFavoriteId(tmdbId, mediaType)
-          return get().favorites.find(f => f.id === id) as TmdbFavoriteItem
-        },
-
         getCmsFavorite: (vodId: string, sourceCode: string) => {
           const id = generateCmsFavoriteId(vodId, sourceCode)
           return get().favorites.find(f => f.id === id) as CmsFavoriteItem
-        },
-
-        toggleTmdbFavorite: (media: TmdbMediaItem) => {
-          const existingId = generateTmdbFavoriteId(media.id, media.mediaType)
-          const exists = get().isTmdbFavorited(media.id, media.mediaType)
-
-          if (exists) {
-            get().removeFavorite(existingId)
-          } else {
-            get().addTmdbFavorite(media)
-          }
         },
 
         toggleCmsFavorite: (video: VideoItem) => {
@@ -523,7 +413,6 @@ export const useFavoritesStore = create<FavoritesStore>()(
                   valB = b.updatedAt
                   break
                 case 'rating':
-                  // 优先用户评分，未评分时回退到 TMDB 站点评分
                   valA = getFavoriteRatingValue(a)
                   valB = getFavoriteRatingValue(b)
                   break
@@ -554,7 +443,6 @@ export const useFavoritesStore = create<FavoritesStore>()(
           const favorites = get().favorites
           const stats: FavoriteStats = {
             total: favorites.length,
-            tmdbCount: 0,
             cmsCount: 0,
             notWatchedCount: 0,
             watchingCount: 0,
@@ -562,8 +450,7 @@ export const useFavoritesStore = create<FavoritesStore>()(
           }
 
           favorites.forEach(f => {
-            if (f.sourceType === 'tmdb') stats.tmdbCount++
-            else stats.cmsCount++
+            stats.cmsCount++
 
             switch (f.watchStatus) {
               case FavoriteWatchStatus.NOT_WATCHED:
@@ -620,12 +507,16 @@ export const useFavoritesStore = create<FavoritesStore>()(
       })),
       {
         name: 'ouonnki-tv-favorites-store',
-        version: 2,
+        version: 3,
         partialize: state => ({ favorites: state.favorites }),
         migrate: persistedState => {
           const state = persistedState as Partial<FavoritesState> | undefined
           return {
-            favorites: Array.isArray(state?.favorites) ? state.favorites : [],
+            favorites: Array.isArray(state?.favorites)
+              ? state.favorites.filter(
+                  (favorite): favorite is CmsFavoriteItem => favorite.sourceType === 'cms',
+                )
+              : [],
           }
         },
         onRehydrateStorage: () => state => {

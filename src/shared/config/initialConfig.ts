@@ -19,7 +19,6 @@ interface SettingsConfig {
     defaultVolume?: number
     playerThemeColor?: string
     maxViewingHistoryCount?: number
-    tmdbMatchCacheTTLHours?: number
     isLoopEnabled?: boolean
     isPipEnabled?: boolean
     isAutoMiniEnabled?: boolean
@@ -29,13 +28,8 @@ interface SettingsConfig {
     isFullscreenProgressHidden?: boolean
   }
   system?: {
-    tmdbEnabled?: boolean
-    tmdbApiBaseUrl?: string
-    tmdbImageBaseUrl?: string
     isUpdateLogEnabled?: boolean
     isScrollChromeAnimationEnabled?: boolean
-    tmdbLanguage?: string
-    tmdbImageQuality?: 'low' | 'medium' | 'high'
   }
 }
 

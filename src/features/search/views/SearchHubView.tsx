@@ -3,80 +3,41 @@ import { useSearchParams } from 'react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useDocumentTitle, useSearchHistory } from '@/shared/hooks'
-import { useTmdbEnabled } from '@/shared/hooks/useTmdbMode'
-import { useTmdbNowPlaying } from '@/shared/hooks/useTmdb'
 import { useSearchStore } from '@/shared/store/searchStore'
 import { OkiLogo } from '@/shared/components/icons'
-import { normalizeSearchMode } from '../lib/searchMode'
 
 import {
-  SearchModeToggle,
   SearchHubInput,
-  SearchTrending,
-  SearchTmdbSection,
   SearchDirectSection,
-  type SearchMode,
 } from '../components'
 
 /**
  * SearchHubView - 搜索中心视图
- * 支持两种搜索模式：智能检索（TMDB）和直连搜索（多源聚合）
+ * 直连搜索页面
  */
 export default function SearchHubView() {
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
-  const modeParam = searchParams.get('mode')
-  const tmdbEnabled = useTmdbEnabled()
-
-  // 搜索模式状态 - 直接从 URL 获取，作为 Single Source of Truth
-  const mode: SearchMode = normalizeSearchMode(modeParam, tmdbEnabled)
-  const defaultMode = tmdbEnabled ? 'tmdb' : 'direct'
 
   const [isDirectCentered, setIsDirectCentered] = useState(false)
 
   // 延迟应用居中样式，等待大家都在搜出现后再下滑
   useEffect(() => {
-    const shouldBeCentered = mode === 'direct' && !query
+    const shouldBeCentered = !query
     if (shouldBeCentered) {
       const timer = setTimeout(() => setIsDirectCentered(true), 400)
       return () => clearTimeout(timer)
     } else {
       setIsDirectCentered(false)
     }
-  }, [mode, query])
+  }, [query])
 
   // 搜索历史写入收敛到显式搜索动作，避免 URL 被动同步导致冗余写入
   const { addSearchHistoryItem } = useSearchStore()
   const { searchHistory, removeSearchHistoryItem, clearSearchHistory } = useSearchHistory()
 
-  // 归一化 URL 中的 mode，避免非法值污染后续行为
-  useEffect(() => {
-    if (modeParam === 'tmdb' || modeParam === 'direct') return
-
-    setSearchParams(prev => {
-      const params = new URLSearchParams(prev)
-      params.set('mode', defaultMode)
-      return params
-    }, { replace: true })
-  }, [modeParam, defaultMode, setSearchParams])
-
-  // Trending Hook（仅 TMDB 模式可用时调用）
-  const { trending } = useTmdbNowPlaying()
-
   // 动态更新页面标题
   useDocumentTitle(query ? `${query} - 搜索` : '搜索中心')
-
-  // 处理模式切换
-  const handleModeChange = useCallback(
-    (newMode: SearchMode) => {
-      setSearchParams(prev => {
-        const params = new URLSearchParams(prev)
-        params.set('mode', newMode)
-        return params
-      })
-    },
-    [setSearchParams],
-  )
 
   // 处理搜索
   const handleSearch = useCallback(
@@ -90,11 +51,11 @@ export default function SearchHubView() {
       setSearchParams(prev => {
         const params = new URLSearchParams(prev)
         params.set('q', normalizedQuery)
-        params.set('mode', mode)
+        params.delete('mode')
         return params
       })
     },
-    [addSearchHistoryItem, mode, setSearchParams],
+    [addSearchHistoryItem, setSearchParams],
   )
 
   // 处理清除搜索
@@ -133,26 +94,18 @@ export default function SearchHubView() {
           )}
         </AnimatePresence>
 
-        {/* 模式切换 - 仅 TMDB 可用时显示 */}
-        {tmdbEnabled && (
-          <motion.div layout>
-            <SearchModeToggle mode={mode} onChange={handleModeChange} />
-          </motion.div>
-        )}
-
         {/* 搜索框 */}
         <motion.div layout className="flex w-full justify-center">
           <SearchHubInput
             initialQuery={query}
             onSearch={handleSearch}
             onClear={handleClear}
-            hideHistoryDropdown={!tmdbEnabled}
           />
         </motion.div>
 
-        {/* 兼容模式下搜索历史徽标 */}
+        {/* 搜索历史徽标 */}
         <AnimatePresence mode="popLayout">
-          {!tmdbEnabled && !query && searchHistory.length > 0 && (
+          {!query && searchHistory.length > 0 && (
             <motion.div
               layout
               className="flex w-full max-w-3xl flex-col gap-2"
@@ -204,27 +157,12 @@ export default function SearchHubView() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* 大家都在搜 - 仅 TMDB 可用时显示 */}
-        <AnimatePresence mode="popLayout">
-          {tmdbEnabled && mode === 'direct' && !query && (
-            <SearchTrending
-              trending={trending}
-              onSearch={handleSearch}
-              isLoading={trending.length === 0}
-            />
-          )}
-        </AnimatePresence>
       </motion.div>
 
-      {/* 结果区域 - 根据模式渲染不同组件 */}
+      {/* 结果区域 */}
       <div className="flex w-full flex-col gap-6">
         <AnimatePresence mode="wait">
-          {mode === 'tmdb' ? (
-            <SearchTmdbSection key="tmdb" query={query} />
-          ) : (
-            <SearchDirectSection key="direct" query={query} />
-          )}
+          <SearchDirectSection key="direct" query={query} />
         </AnimatePresence>
       </div>
     </div>

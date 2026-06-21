@@ -25,7 +25,6 @@ interface PlaybackSettings {
   defaultVolume: number
   playerThemeColor: string
   maxViewingHistoryCount: number
-  tmdbMatchCacheTTLHours: number
   isLoopEnabled: boolean
   isPipEnabled: boolean
   isAutoMiniEnabled: boolean
@@ -36,14 +35,8 @@ interface PlaybackSettings {
 }
 
 interface SystemSettings {
-  tmdbEnabled: boolean
-  tmdbApiToken: string
-  tmdbApiBaseUrl: string
-  tmdbImageBaseUrl: string
   isUpdateLogEnabled: boolean
   isScrollChromeAnimationEnabled: boolean
-  tmdbLanguage: string
-  tmdbImageQuality: 'low' | 'medium' | 'high'
 }
 
 interface SettingState {
@@ -71,6 +64,22 @@ interface SettingActions {
 }
 
 type SettingStore = SettingState & SettingActions
+
+const pickKnownSettings = <T extends Record<string, unknown>>(
+  defaults: T,
+  value: unknown,
+): T => {
+  const persisted = (value ?? {}) as Record<string, unknown>
+  const next = { ...defaults }
+
+  Object.keys(defaults).forEach(key => {
+    if (Object.prototype.hasOwnProperty.call(persisted, key)) {
+      next[key as keyof T] = persisted[key] as T[keyof T]
+    }
+  })
+
+  return next
+}
 
 export const useSettingStore = create<SettingStore>()(
   devtools(
@@ -101,12 +110,7 @@ export const useSettingStore = create<SettingStore>()(
 
         setSystemSettings: settings => {
           set(state => {
-            const merged = { ...state.system, ...settings }
-            // 清空 token 且无环境变量 token 时，自动关闭 tmdbEnabled
-            if ('tmdbApiToken' in settings && !settings.tmdbApiToken && !import.meta.env.OKI_TMDB_API_TOKEN) {
-              merged.tmdbEnabled = false
-            }
-            state.system = merged
+            state.system = { ...state.system, ...settings }
           })
         },
 
@@ -121,9 +125,9 @@ export const useSettingStore = create<SettingStore>()(
       })),
       {
         name: 'ouonnki-tv-setting-store',
-        version: 14,
+        version: 15,
         migrate: (persistedState: unknown, version: number) => {
-          const state = persistedState as Record<string, unknown>
+          const state = (persistedState ?? {}) as Record<string, unknown>
           if (version < 2 && state.playback) {
             delete (state.playback as Record<string, unknown>).adFilteringEnabled
           }
@@ -138,10 +142,6 @@ export const useSettingStore = create<SettingStore>()(
             network.concurrencyLimit ??= DEFAULT_SETTINGS.network.concurrencyLimit
             state.network = network
 
-            const system = (state.system ?? {}) as Record<string, unknown>
-            system.tmdbLanguage ??= DEFAULT_SETTINGS.system.tmdbLanguage
-            system.tmdbImageQuality ??= DEFAULT_SETTINGS.system.tmdbImageQuality
-            state.system = system
           }
           if (version < 4) {
             // v3→v4: 搜索历史上限 + 播放器功能开关
@@ -162,31 +162,10 @@ export const useSettingStore = create<SettingStore>()(
             network.proxyUrl ??= DEFAULT_SETTINGS.network.proxyUrl
             state.network = network
           }
-          if (version < 6) {
-            const playback = (state.playback ?? {}) as Record<string, unknown>
-            playback.tmdbMatchCacheTTLHours ??= DEFAULT_SETTINGS.playback.tmdbMatchCacheTTLHours
-            state.playback = playback
-          }
           if (version < 7) {
             const playback = (state.playback ?? {}) as Record<string, unknown>
             playback.isMobileGestureEnabled ??= DEFAULT_SETTINGS.playback.isMobileGestureEnabled
             state.playback = playback
-          }
-          if (version < 8) {
-            const system = (state.system ?? {}) as Record<string, unknown>
-            system.tmdbEnabled ??= DEFAULT_SETTINGS.system.tmdbEnabled
-            state.system = system
-          }
-          if (version < 9) {
-            const system = (state.system ?? {}) as Record<string, unknown>
-            system.tmdbApiToken ??= ''
-            state.system = system
-          }
-          if (version < 10) {
-            const system = (state.system ?? {}) as Record<string, unknown>
-            system.tmdbApiBaseUrl ??= DEFAULT_SETTINGS.system.tmdbApiBaseUrl
-            system.tmdbImageBaseUrl ??= DEFAULT_SETTINGS.system.tmdbImageBaseUrl
-            state.system = system
           }
           if (version < 11) {
             const system = (state.system ?? {}) as Record<string, unknown>
@@ -203,12 +182,12 @@ export const useSettingStore = create<SettingStore>()(
             playback.isFullscreenProgressHidden ??= DEFAULT_SETTINGS.playback.isFullscreenProgressHidden
             state.playback = playback
           }
-          if (version < 14) {
-            const system = (state.system ?? {}) as Record<string, unknown>
-            system.tmdbEnabled = false
-            state.system = system
+          return {
+            network: pickKnownSettings(DEFAULT_SETTINGS.network, state.network),
+            search: pickKnownSettings(DEFAULT_SETTINGS.search, state.search),
+            playback: pickKnownSettings(DEFAULT_SETTINGS.playback, state.playback),
+            system: pickKnownSettings(DEFAULT_SETTINGS.system, state.system),
           }
-          return state
         },
       },
     ),

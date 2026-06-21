@@ -1,5 +1,3 @@
 export * from './playerRoute'
-export * from './playerViewState'
 export * from './playerMiniLayout'
-export * from './playerSelection'
 export * from './mobileGesture'

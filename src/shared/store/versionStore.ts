@@ -90,14 +90,14 @@ const VERSION_UPDATES: VersionUpdate[] = [
   },
   {
     version: '2.0.1',
-    title: 'TMDB 可配置能力增强',
+    title: '外部元数据配置能力增强',
     date: formatDate('2026-02-26'),
     features: [
-      '新增 TMDB API Base URL 配置，支持环境变量和设置页覆盖',
-      '新增 TMDB 图片 Base URL 配置，支持环境变量和设置页覆盖',
-      '新增 Base URL 自动补全与回退策略（设置页 > 环境变量 > 官方默认值）',
+      '新增外部元数据接口 Base URL 配置，支持环境变量和设置页覆盖',
+      '新增图片资源 Base URL 配置，支持环境变量和设置页覆盖',
+      '新增 Base URL 自动补全与回退策略',
     ],
-    fixes: ['优化 TMDB 在不同网络环境下的可访问性与稳定性'],
+    fixes: ['优化不同网络环境下的资源可访问性与稳定性'],
     breaking: [],
   },
   {
@@ -106,7 +106,7 @@ const VERSION_UPDATES: VersionUpdate[] = [
     date: formatDate('2026-02-23'),
     features: [
       '全新 Feature-Sliced Design 架构，代码组织更清晰',
-      '新增 TMDB 智能模式：自动匹配影片元数据、海报、评分和推荐',
+      '新增聚合搜索与播放页体验优化',
       '新增收藏管理功能，支持收藏喜欢的影片',
       '新增视频源订阅功能，支持远程订阅自动更新',
       '全新 UI 体系：迁移至 Radix UI + shadcn/ui，视觉与交互全面升级',

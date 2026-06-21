@@ -6,7 +6,7 @@ import { AspectRatio } from '@/shared/components/ui/aspect-ratio'
 import { Checkbox } from '@/shared/components/ui/checkbox'
 import { Progress } from '@/shared/components/ui/progress'
 import { cn } from '@/shared/lib/utils'
-import { buildHistoryPlayPath, isTmdbHistoryItem } from '@/shared/lib/viewingHistory'
+import { buildHistoryPlayPath } from '@/shared/lib/viewingHistory'
 import type { ViewingHistoryItem } from '@/shared/types'
 
 interface ViewingHistoryCardProps {
@@ -47,7 +47,6 @@ const formatHistoryTimestamp = (timestamp: number) => {
 }
 
 const getEpisodeLabel = (item: ViewingHistoryItem) => item.episodeName || `第${item.episodeIndex + 1}集`
-const getRecordTypeLabel = (item: ViewingHistoryItem) => (isTmdbHistoryItem(item) ? 'TMDB' : 'CMS')
 const getSourceLabel = (item: ViewingHistoryItem) => item.sourceName || item.sourceCode || '未知源'
 
 export function ViewingHistoryCard({
@@ -109,7 +108,7 @@ export function ViewingHistoryCard({
         />
         <div className="pointer-events-none absolute top-2 left-2 flex max-w-[82%] items-center gap-1 transition-opacity duration-300 group-hover:opacity-0">
           <span className="rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white">
-            {getRecordTypeLabel(item)}
+            CMS
           </span>
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6 transition-opacity duration-300 group-hover:opacity-0">

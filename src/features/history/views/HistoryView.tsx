@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useViewingHistoryStore } from '@/shared/store'
-import { useTmdbEnabled } from '@/shared/hooks/useTmdbMode'
 import type { ViewingHistoryItem } from '@/shared/types'
 import { HistoryDialogs, HistoryHeader, HistoryTimeline } from '../components'
 import { getHistoryItemKey, groupHistoryBySection } from '../utils/history'
@@ -12,7 +11,6 @@ import { getHistoryItemKey, groupHistoryBySection } from '../utils/history'
  */
 export default function HistoryView() {
   const { viewingHistory, removeViewingHistoryItem, clearViewingHistory } = useViewingHistoryStore()
-  const tmdbEnabled = useTmdbEnabled()
 
   const [selectionMode, setSelectionMode] = useState(false)
   const [actionDirection, setActionDirection] = useState(1)
@@ -22,11 +20,8 @@ export default function HistoryView() {
   const [clearAllOpen, setClearAllOpen] = useState(false)
 
   const sortedHistory = useMemo(() => {
-    const list = tmdbEnabled
-      ? viewingHistory
-      : viewingHistory.filter(item => item.recordType !== 'tmdb')
-    return [...list].sort((a, b) => b.timestamp - a.timestamp)
-  }, [viewingHistory, tmdbEnabled])
+    return [...viewingHistory].sort((a, b) => b.timestamp - a.timestamp)
+  }, [viewingHistory])
   const hasHistory = sortedHistory.length > 0
 
   const allItemKeys = useMemo(() => {

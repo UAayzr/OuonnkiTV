@@ -16,11 +16,7 @@ import { isBrowser } from 'react-device-detect'
 import clsx from 'clsx'
 import { motion } from 'framer-motion'
 import type { ViewingHistoryItem } from '@/shared/types'
-import {
-  buildHistoryPlayPath,
-  getHistoryItemKey,
-  isTmdbHistoryItem,
-} from '@/shared/lib/viewingHistory'
+import { buildHistoryPlayPath, getHistoryItemKey } from '@/shared/lib/viewingHistory'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -82,7 +78,7 @@ const HistoryList = ({
                       variant="default"
                       className="h-[6cqw] px-[3%] text-[3cqw] md:h-6 md:px-2 md:text-xs"
                     >
-                      {isTmdbHistoryItem(item) ? 'TMDB' : 'CMS'} · {item.sourceName}
+                      CMS · {item.sourceName}
                     </Badge>
                     <div className="flex items-center justify-center gap-[.6rem] text-[3.5cqw] text-gray-500 md:text-sm">
                       <p>{dayjs(item.timestamp).fromNow()}</p>

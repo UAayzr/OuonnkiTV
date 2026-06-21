@@ -25,15 +25,6 @@ docker-compose up -d --build
    # 初始视频源（单行 JSON 格式）
    OKI_INITIAL_VIDEO_SOURCES=[{"name":"示例源","url":"https://api.example.com","isEnabled":true}]
 
-   # TMDB API Token（可选，启用 TMDB 智能模式，申请方式见下方链接）
-   OKI_TMDB_API_TOKEN=your_tmdb_token
-
-   # TMDB API 基础地址（可选，支持相对路径）
-   OKI_TMDB_API_BASE_URL=https://api.themoviedb.org/3
-
-   # TMDB 图片基础地址（可选，支持相对路径）
-   OKI_TMDB_IMAGE_BASE_URL=https://image.tmdb.org/t/p/
-
    # 禁用分析（建议开启）
    OKI_DISABLE_ANALYTICS=true
 
@@ -41,12 +32,7 @@ docker-compose up -d --build
    OKI_ACCESS_PASSWORD=your_secure_password
    ```
 
-   > 中国大陆网络环境如遇 TMDB 官方域名访问不稳定，建议改为：
-   > `OKI_TMDB_API_BASE_URL=https://api.tmdb.org`
-   > `OKI_TMDB_IMAGE_BASE_URL=https://image.tmdb.org`
-
    > 📘 完整环境变量说明 → [配置管理](./configuration.md)
-   > 📘 TMDB Token 申请方法 → [TMDB API Key 申请指南](./tmdb-key.md)
 
 3. 构建并启动：
    ```bash
@@ -99,7 +85,7 @@ docker run -d -p 3000:80 ghcr.io/ouonnki/ouonnkitv:latest
    - Install Command: `pnpm install`
    - Build Command: `pnpm build`
    - Output Directory: `dist`
-5. （可选）配置环境变量（参考 [配置管理](./configuration.md)，TMDB Token 申请参考 [TMDB API Key 申请指南](./tmdb-key.md)）
+5. （可选）配置环境变量（参考 [配置管理](./configuration.md)）
 6. 点击 "Deploy" 开始部署
 
 ---

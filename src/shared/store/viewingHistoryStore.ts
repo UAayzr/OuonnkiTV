@@ -93,13 +93,13 @@ export const useViewingHistoryStore = create<ViewingHistoryStore>()(
       })),
       {
         name: 'ouonnki-tv-viewing-history', // 持久化存储的键名
-        version: 3,
+        version: 4,
         migrate: (persistedState: unknown, version: number) => {
           const persistedHistory =
             (
               persistedState as
                 | {
-                    viewingHistory?: ViewingHistoryItem[]
+                    viewingHistory?: Array<ViewingHistoryItem & { recordType?: string }>
                   }
                 | undefined
             )?.viewingHistory || []
@@ -123,11 +123,13 @@ export const useViewingHistoryStore = create<ViewingHistoryStore>()(
               viewingHistory: persistedHistory.map(item => ({
                 ...item,
                 sourceName: item.sourceName || item.sourceCode.slice(0, 5),
-                recordType: item.recordType === 'tmdb' ? 'tmdb' : 'cms',
+                recordType: 'cms',
               })),
             }
           }
-          return persistedState
+          return {
+            viewingHistory: persistedHistory.filter(item => item.recordType === 'cms'),
+          }
         },
       },
     ),

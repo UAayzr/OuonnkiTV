@@ -53,8 +53,7 @@ function EmptySourceState() {
 }
 
 /**
- * CmsHomeContent - CMS 模式首页内容
- * 当 TMDB 未启用时作为首页内容展示
+ * CmsHomeContent - CMS 首页内容
  */
 export function CmsHomeContent() {
   const allVideoAPIs = useApiStore(state => state.videoAPIs)

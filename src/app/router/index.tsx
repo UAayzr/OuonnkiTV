@@ -14,7 +14,6 @@ const HomeView = lazy(() => import('@/features/home/views/HomeView'))
 const SearchHubView = lazy(() => import('@/features/search/views/SearchHubView'))
 const FavoritesView = lazy(() => import('@/features/favorites/views/FavoritesView'))
 const HistoryView = lazy(() => import('@/features/history/views/HistoryView'))
-const TmdbDetailView = lazy(() => import('@/features/media/views/TmdbDetailView'))
 
 // Settings sub-routes
 const SourceSettings = lazy(() => import('@/features/settings/views/SourceSettings'))
@@ -96,22 +95,6 @@ const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <HistoryView />
-          </SuspenseWrapper>
-        ),
-      },
-      {
-        path: 'media/:type/:tmdbId',
-        element: (
-          <SuspenseWrapper>
-            <TmdbDetailView />
-          </SuspenseWrapper>
-        ),
-      },
-      {
-        path: 'play/:type/:tmdbId',
-        element: (
-          <SuspenseWrapper>
-            <UnifiedPlayer />
           </SuspenseWrapper>
         ),
       },

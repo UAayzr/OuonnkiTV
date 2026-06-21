@@ -3,46 +3,6 @@ import { DEFAULT_SETTINGS } from '@/shared/config/settings.config'
 import { useSettingStore } from './settingStore'
 
 describe('settingStore migrate', () => {
-  it('v5 -> v6 会补齐 tmdbMatchCacheTTLHours 默认值', async () => {
-    const migrate = useSettingStore.persist.getOptions().migrate
-
-    const legacyState = {
-      network: DEFAULT_SETTINGS.network,
-      search: DEFAULT_SETTINGS.search,
-      playback: {
-        ...DEFAULT_SETTINGS.playback,
-      },
-      system: DEFAULT_SETTINGS.system,
-    }
-    delete (legacyState.playback as Record<string, unknown>).tmdbMatchCacheTTLHours
-
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 5))) as {
-      playback: { tmdbMatchCacheTTLHours?: number }
-    }
-
-    expect(migrated.playback.tmdbMatchCacheTTLHours).toBe(24)
-  })
-
-  it('已有 tmdbMatchCacheTTLHours 时不覆盖', async () => {
-    const migrate = useSettingStore.persist.getOptions().migrate
-
-    const legacyState = {
-      network: DEFAULT_SETTINGS.network,
-      search: DEFAULT_SETTINGS.search,
-      playback: {
-        ...DEFAULT_SETTINGS.playback,
-        tmdbMatchCacheTTLHours: 72,
-      },
-      system: DEFAULT_SETTINGS.system,
-    }
-
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 5))) as {
-      playback: { tmdbMatchCacheTTLHours?: number }
-    }
-
-    expect(migrated.playback.tmdbMatchCacheTTLHours).toBe(72)
-  })
-
   it('v6 -> v7 会补齐 isMobileGestureEnabled 默认值', async () => {
     const migrate = useSettingStore.persist.getOptions().migrate
 
@@ -83,63 +43,13 @@ describe('settingStore migrate', () => {
     expect(migrated.playback.isMobileGestureEnabled).toBe(false)
   })
 
-  it('v9 -> v10 会补齐 tmdbApiBaseUrl 与 tmdbImageBaseUrl 默认值', async () => {
-    const migrate = useSettingStore.persist.getOptions().migrate
-
-    const legacyState = {
-      network: DEFAULT_SETTINGS.network,
-      search: DEFAULT_SETTINGS.search,
-      playback: {
-        ...DEFAULT_SETTINGS.playback,
-      },
-      system: {
-        ...DEFAULT_SETTINGS.system,
-      },
-    }
-    delete (legacyState.system as Record<string, unknown>).tmdbApiBaseUrl
-    delete (legacyState.system as Record<string, unknown>).tmdbImageBaseUrl
-
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 9))) as {
-      system: { tmdbApiBaseUrl?: string; tmdbImageBaseUrl?: string }
-    }
-
-    expect(migrated.system.tmdbApiBaseUrl).toBe(DEFAULT_SETTINGS.system.tmdbApiBaseUrl)
-    expect(migrated.system.tmdbImageBaseUrl).toBe(DEFAULT_SETTINGS.system.tmdbImageBaseUrl)
-  })
-
-  it('已有 tmdbApiBaseUrl 与 tmdbImageBaseUrl 时不覆盖', async () => {
-    const migrate = useSettingStore.persist.getOptions().migrate
-
-    const legacyState = {
-      network: DEFAULT_SETTINGS.network,
-      search: DEFAULT_SETTINGS.search,
-      playback: {
-        ...DEFAULT_SETTINGS.playback,
-      },
-      system: {
-        ...DEFAULT_SETTINGS.system,
-        tmdbApiBaseUrl: '/custom-api',
-        tmdbImageBaseUrl: '/custom-image',
-      },
-    }
-
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 9))) as {
-      system: { tmdbApiBaseUrl?: string; tmdbImageBaseUrl?: string }
-    }
-
-    expect(migrated.system.tmdbApiBaseUrl).toBe('/custom-api')
-    expect(migrated.system.tmdbImageBaseUrl).toBe('/custom-image')
-  })
-
   it('v10 -> v11 会补齐 isScrollChromeAnimationEnabled 默认值', async () => {
     const migrate = useSettingStore.persist.getOptions().migrate
 
     const legacyState = {
       network: DEFAULT_SETTINGS.network,
       search: DEFAULT_SETTINGS.search,
-      playback: {
-        ...DEFAULT_SETTINGS.playback,
-      },
+      playback: DEFAULT_SETTINGS.playback,
       system: {
         ...DEFAULT_SETTINGS.system,
       },
@@ -151,28 +61,6 @@ describe('settingStore migrate', () => {
     }
 
     expect(migrated.system.isScrollChromeAnimationEnabled).toBe(false)
-  })
-
-  it('已有 isScrollChromeAnimationEnabled 时不覆盖', async () => {
-    const migrate = useSettingStore.persist.getOptions().migrate
-
-    const legacyState = {
-      network: DEFAULT_SETTINGS.network,
-      search: DEFAULT_SETTINGS.search,
-      playback: {
-        ...DEFAULT_SETTINGS.playback,
-      },
-      system: {
-        ...DEFAULT_SETTINGS.system,
-        isScrollChromeAnimationEnabled: true,
-      },
-    }
-
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 10))) as {
-      system: { isScrollChromeAnimationEnabled?: boolean }
-    }
-
-    expect(migrated.system.isScrollChromeAnimationEnabled).toBe(true)
   })
 
   it('v11 -> v12 会补齐 longPressPlaybackRate 默认值', async () => {
@@ -193,26 +81,6 @@ describe('settingStore migrate', () => {
     }
 
     expect(migrated.playback.longPressPlaybackRate).toBe(DEFAULT_SETTINGS.playback.longPressPlaybackRate)
-  })
-
-  it('已有 longPressPlaybackRate 时不覆盖', async () => {
-    const migrate = useSettingStore.persist.getOptions().migrate
-
-    const legacyState = {
-      network: DEFAULT_SETTINGS.network,
-      search: DEFAULT_SETTINGS.search,
-      playback: {
-        ...DEFAULT_SETTINGS.playback,
-        longPressPlaybackRate: 3.5,
-      },
-      system: DEFAULT_SETTINGS.system,
-    }
-
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 11))) as {
-      playback: { longPressPlaybackRate?: number }
-    }
-
-    expect(migrated.playback.longPressPlaybackRate).toBe(3.5)
   })
 
   it('v12 -> v13 会补齐 isFullscreenProgressHidden 默认值', async () => {
@@ -237,43 +105,28 @@ describe('settingStore migrate', () => {
     )
   })
 
-  it('已有 isFullscreenProgressHidden 时不覆盖', async () => {
+  it('迁移后会忽略旧配置中的未知字段', async () => {
     const migrate = useSettingStore.persist.getOptions().migrate
-
     const legacyState = {
-      network: DEFAULT_SETTINGS.network,
+      network: {
+        ...DEFAULT_SETTINGS.network,
+        legacyNetworkFlag: true,
+      },
       search: DEFAULT_SETTINGS.search,
       playback: {
         ...DEFAULT_SETTINGS.playback,
-        isFullscreenProgressHidden: true,
+        removedPlaybackFlag: 24,
       },
-      system: DEFAULT_SETTINGS.system,
-    }
-
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 12))) as {
-      playback: { isFullscreenProgressHidden?: boolean }
-    }
-
-    expect(migrated.playback.isFullscreenProgressHidden).toBe(true)
-  })
-
-  it('v13 -> v14 会默认关闭 TMDB 智能模式', async () => {
-    const migrate = useSettingStore.persist.getOptions().migrate
-
-    const legacyState = {
-      network: DEFAULT_SETTINGS.network,
-      search: DEFAULT_SETTINGS.search,
-      playback: DEFAULT_SETTINGS.playback,
       system: {
         ...DEFAULT_SETTINGS.system,
-        tmdbEnabled: true,
+        removedSystemFlag: 'legacy',
       },
     }
 
-    const migrated = (await Promise.resolve(migrate?.(legacyState, 13))) as {
-      system: { tmdbEnabled?: boolean }
-    }
+    const migrated = (await Promise.resolve(migrate?.(legacyState, 14))) as Record<string, unknown>
 
-    expect(migrated.system.tmdbEnabled).toBe(false)
+    expect(migrated.network).not.toHaveProperty('legacyNetworkFlag')
+    expect(migrated.playback).not.toHaveProperty('removedPlaybackFlag')
+    expect(migrated.system).not.toHaveProperty('removedSystemFlag')
   })
 })

@@ -149,9 +149,6 @@ importers:
       tailwindcss:
         specifier: ^4.1.8
         version: 4.1.8
-      tmdb-ts:
-        specifier: ^2.0.3
-        version: 2.0.3
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
@@ -3947,9 +3944,6 @@ packages:
   tldts@7.0.23:
     resolution: {integrity: sha512-ASdhgQIBSay0R/eXggAkQ53G4nTJqTXqC2kbaBbdDwM7SkjyZyO0OaaN1/FH7U/yCeqOHDwFO5j8+Os/IS1dXw==}
     hasBin: true
-
-  tmdb-ts@2.0.3:
-    resolution: {integrity: sha512-zcytL1lYJnggiilswjOfWvOYmdjaGmxx8UuwAdMgYLebhG/aw9rvuxwv2TpekuayORrcvMuZobsLE3xThQrVqA==}
 
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -7795,12 +7789,6 @@ snapshots:
   tldts@7.0.23:
     dependencies:
       tldts-core: 7.0.23
-
-  tmdb-ts@2.0.3:
-    dependencies:
-      cross-fetch: 4.1.0
-    transitivePeerDependencies:
-      - encoding
 
   to-regex-range@5.0.1:
     dependencies:

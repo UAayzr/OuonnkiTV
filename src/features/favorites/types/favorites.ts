@@ -1,5 +1,5 @@
 /** 收藏项数据来源类型 */
-export type FavoriteSourceType = 'tmdb' | 'cms'
+export type FavoriteSourceType = 'cms'
 
 /**
  * 收藏项观看状态
@@ -11,39 +11,6 @@ export enum FavoriteWatchStatus {
   WATCHING = 'watching',
   /** 已看完 */
   COMPLETED = 'completed',
-}
-
-/**
- * TMDB 收藏项
- */
-export interface TmdbFavoriteItem {
-  /** 唯一标识符，格式: tmdb_{mediaType}_{id} */
-  id: string
-  /** 添加时间戳 */
-  addedAt: number
-  /** 更新时间戳 */
-  updatedAt: number
-  /** 数据来源类型 */
-  sourceType: 'tmdb'
-  /** 观看状态 */
-  watchStatus: FavoriteWatchStatus
-  /** 用户备注 */
-  notes?: string
-  /** 用户评分 (1-5) */
-  rating?: number
-  /** 标签列表 */
-  tags: string[]
-  /** TMDB 媒体数据快照 */
-  media: {
-    id: number
-    mediaType: 'movie' | 'tv'
-    title: string
-    originalTitle: string
-    posterPath: string | null
-    backdropPath: string | null
-    releaseDate: string
-    voteAverage: number
-  }
 }
 
 /**
@@ -82,7 +49,7 @@ export interface CmsFavoriteItem {
 /**
  * 收藏项联合类型
  */
-export type FavoriteItem = TmdbFavoriteItem | CmsFavoriteItem
+export type FavoriteItem = CmsFavoriteItem
 
 /**
  * 收藏项列表
@@ -112,7 +79,6 @@ export interface FavoriteFilterOptions {
  */
 export interface FavoriteStats {
   total: number
-  tmdbCount: number
   cmsCount: number
   notWatchedCount: number
   watchingCount: number

@@ -28,8 +28,7 @@ import { cn } from '@/shared/lib/utils'
 import { FavoriteWatchStatus } from '../../types/favorites'
 import type { FavoriteItem } from '../../types/favorites'
 import { getSourceColorScheme } from '@/shared/lib/source-colors'
-import { getPosterUrl } from '@/shared/lib/tmdb'
-import { buildCmsPlayPath, buildTmdbDetailPath } from '@/shared/lib/routes'
+import { buildCmsPlayPath } from '@/shared/lib/routes'
 import { toast } from 'sonner'
 
 /** 观看状态配置 */
@@ -60,25 +59,14 @@ interface FavoritesGridProps {
  * 将 FavoriteItem 转换为 MediaPosterCard props
  */
 function favoriteToPosterCard(item: FavoriteItem) {
-  if (item.sourceType === 'tmdb') {
-    const { media } = item
-    return {
-      to: buildTmdbDetailPath(item.media.mediaType, item.media.id),
-      posterUrl: getPosterUrl(media.posterPath, 'w342') || null,
-      title: media.title,
-      year: media.releaseDate?.split('-')[0],
-      rating: media.voteAverage,
-    }
-  } else {
-    const { media } = item
-    return {
-      to: buildCmsPlayPath(media.sourceCode, media.vodId),
-      posterUrl: media.vodPic || null,
-      title: media.vodName,
-      year: media.vodYear,
-      topRightLabel: media.sourceName,
-      topRightLabelColorScheme: getSourceColorScheme(media.sourceCode),
-    }
+  const { media } = item
+  return {
+    to: buildCmsPlayPath(media.sourceCode, media.vodId),
+    posterUrl: media.vodPic || null,
+    title: media.vodName,
+    year: media.vodYear,
+    topRightLabel: media.sourceName,
+    topRightLabelColorScheme: getSourceColorScheme(media.sourceCode),
   }
 }
 

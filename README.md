@@ -19,7 +19,7 @@
 
 ## ✨ 特性
 
-聚合搜索 · 流畅播放· TMDB 智能匹配 · 收藏管理 · 视频源订阅 · 观看历史 · 响应式设计 · 高性能· 多端适配· 出色的UI/UX
+聚合搜索 · 流畅播放 · 收藏管理 · 视频源订阅 · 观看历史 · 响应式设计 · 高性能 · 多端适配 · 出色的 UI/UX
 
 ## 🚀 快速开始
 
@@ -32,8 +32,7 @@
 | 文档 | 说明 |
 | ---- | ---- |
 | [部署指南](docs/deployment.md) | Docker / Vercel / Cloudflare / Netlify / 本地开发 / 更新同步 |
-| [配置管理](docs/configuration.md) | 环境变量、TMDB 配置、完整配置导入 |
-| [TMDB Key 申请](docs/tmdb-key.md) | TMDB API Token 注册与获取教程 |
+| [配置管理](docs/configuration.md) | 环境变量、视频源配置、完整配置导入 |
 | [视频源导入](docs/video-sources.md) | 导入方式、JSON 格式说明 |
 | [开发者指南](docs/development.md) | 技术栈、项目结构、代理架构、@ouonnki/cms-core |
 

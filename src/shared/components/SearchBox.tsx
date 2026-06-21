@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
 import { Popover, PopoverContent, PopoverAnchor } from '@/shared/components/ui/popover'
-import { useSearch, useSearchHistory, useSearchSuggestions } from '@/shared/hooks'
+import { useSearch, useSearchHistory } from '@/shared/hooks'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 
 // 创建支持 motion 的 Button 组件
@@ -19,7 +19,6 @@ interface SearchBoxProps {
 export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
   const { search: searchQuery, searchMovie } = useSearch()
   const { searchHistory, removeSearchHistoryItem } = useSearchHistory()
-  const { suggestions, isLoading, fetchSuggestions, clearSuggestions } = useSearchSuggestions()
 
   const [inputContent, setInputContent] = useState('')
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
@@ -32,9 +31,7 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
   // 判断是否应该显示下拉框
   const hasContent = inputContent.trim().length > 0
   const hasHistory = searchHistory.length > 0
-  const hasSuggestions = suggestions.length > 0
-  const shouldShowDropdown =
-    isDropdownOpen && (hasContent ? hasSuggestions || isLoading : hasHistory)
+  const shouldShowDropdown = isDropdownOpen && !hasContent && hasHistory
 
   const handleInteractiveItemKeyDown = (
     event: React.KeyboardEvent<HTMLDivElement>,
@@ -57,16 +54,10 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
 
   const handleClear = () => {
     setInputContent('')
-    clearSuggestions()
   }
 
   const handleInputChange = (value: string) => {
     setInputContent(value)
-    if (value.trim()) {
-      fetchSuggestions(value)
-    } else {
-      clearSuggestions()
-    }
   }
 
   const handleFocus = () => {
@@ -101,15 +92,6 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
     [removeSearchHistoryItem],
   )
 
-  const handleSuggestionClick = useCallback(
-    (title: string) => {
-      setInputContent(title)
-      searchMovie(title)
-      setIsDropdownOpen(false)
-    },
-    [searchMovie],
-  )
-
   const openMobileSearch = () => {
     setIsMobileSearchOpen(true)
     onMobileSearchChange?.(true)
@@ -142,60 +124,33 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
   const DropdownContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="p-1">
       <ScrollArea className="max-h-100 px-3">
-        {!hasContent ? (
-          // 最近搜索
-          <div>
-            <div className="text-muted-foreground px-3 py-2 text-xs font-medium">最近搜索</div>
-            {searchHistory.map(item => (
-              <div
-                key={item.id}
-                className="hover:bg-accent group flex cursor-pointer items-center rounded-lg px-3 py-2 transition-colors"
-                onClick={() => handleHistoryItemClick(item.content)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => handleInteractiveItemKeyDown(e, () => handleHistoryItemClick(item.content))}
+        <div>
+          <div className="text-muted-foreground px-3 py-2 text-xs font-medium">最近搜索</div>
+          {searchHistory.map(item => (
+            <div
+              key={item.id}
+              className="hover:bg-accent group flex cursor-pointer items-center rounded-lg px-3 py-2 transition-colors"
+              onClick={() => handleHistoryItemClick(item.content)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => handleInteractiveItemKeyDown(e, () => handleHistoryItemClick(item.content))}
+            >
+              <History className="text-muted-foreground mr-3 size-4 shrink-0" />
+              <span className="flex-1 truncate">{item.content}</span>
+              <button
+                type="button"
+                className={`text-muted-foreground hover:text-destructive shrink-0 p-1 transition-colors ${
+                  isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}
+                onMouseDown={e => e.preventDefault()}
+                onKeyDown={e => e.stopPropagation()}
+                onClick={e => handleHistoryItemDelete(e, item.id)}
               >
-                <History className="text-muted-foreground mr-3 size-4 shrink-0" />
-                <span className="flex-1 truncate">{item.content}</span>
-                <button
-                  type="button"
-                  className={`text-muted-foreground hover:text-destructive shrink-0 p-1 transition-colors ${
-                    isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                  }`}
-                  onMouseDown={e => e.preventDefault()}
-                  onKeyDown={e => e.stopPropagation()}
-                  onClick={e => handleHistoryItemDelete(e, item.id)}
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          // 搜索建议
-          <div>
-            {isLoading ? (
-              <div className="text-muted-foreground px-3 py-4 text-center text-sm">搜索中...</div>
-            ) : (
-              suggestions.map(item => (
-                <div
-                  key={`${item.mediaType}-${item.id}`}
-                  className="hover:bg-accent flex cursor-pointer items-center rounded-lg px-3 py-2 transition-colors"
-                  onClick={() => handleSuggestionClick(item.title)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={e => handleInteractiveItemKeyDown(e, () => handleSuggestionClick(item.title))}
-                >
-                  <Search className="text-muted-foreground mr-3 size-4 shrink-0" />
-                  <span className="flex-1 truncate">{item.title}</span>
-                  <span className="text-muted-foreground ml-2 shrink-0 text-xs">
-                    {item.mediaType === 'movie' ? '电影' : '剧集'}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          ))}
+        </div>
       </ScrollArea>
     </div>
   )

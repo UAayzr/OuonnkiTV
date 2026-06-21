@@ -58,7 +58,6 @@ const personalConfigSchema = z.object({
         defaultVolume: z.number().min(0).max(1).optional(),
         playerThemeColor: z.string().optional(),
         maxViewingHistoryCount: z.number().min(10).max(500).optional(),
-        tmdbMatchCacheTTLHours: z.number().min(1).max(168).optional(),
         isLoopEnabled: z.boolean().optional(),
         isPipEnabled: z.boolean().optional(),
         isAutoMiniEnabled: z.boolean().optional(),
@@ -74,10 +73,6 @@ const personalConfigSchema = z.object({
       .object({
         isUpdateLogEnabled: z.boolean().optional(),
         isScrollChromeAnimationEnabled: z.boolean().optional(),
-        tmdbApiBaseUrl: z.string().optional(),
-        tmdbImageBaseUrl: z.string().optional(),
-        tmdbLanguage: z.string().optional(),
-        tmdbImageQuality: z.enum(['low', 'medium', 'high']).optional(),
       })
       .optional(),
   }),
