@@ -1,5 +1,4 @@
 import { Edit3, CheckSquare, Square, Trash2, X, XCircle } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/shared/components/ui/button'
 import {
   AlertDialog,
@@ -25,82 +24,6 @@ export interface ManagementPanelProps {
   onDeselectAll: () => void
   onClearAll: () => void
   onDeleteSelected: () => void
-}
-
-/** 桌面端：宽度从圆形(48px)弹性展开到自适应 */
-const desktopPanelVariants = {
-  initial: { width: 48 },
-  animate: {
-    width: 'auto',
-    transition: {
-      width: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] },
-      staggerChildren: 0.04,
-      delayChildren: 0.1,
-    },
-  },
-  exit: {
-    width: 48,
-    transition: {
-      width: { duration: 0.18, ease: [0.4, 0, 1, 1], delay: 0.08 },
-      staggerChildren: 0.015,
-      staggerDirection: -1,
-    },
-  },
-}
-
-/** 移动端：从底部滑入全宽底栏 */
-const mobilePanelVariants = {
-  initial: { opacity: 0, y: 16 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.25,
-      ease: [0.25, 0.1, 0.25, 1],
-      staggerChildren: 0.03,
-      delayChildren: 0.05,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: 16,
-    transition: {
-      duration: 0.15,
-      staggerChildren: 0.015,
-      staggerDirection: -1,
-    },
-  },
-}
-
-/** 面板内各元素：从右侧滑入/退出 */
-const itemVariants = {
-  initial: { opacity: 0, x: 20 },
-  animate: {
-    opacity: 1,
-    x: 0,
-    transition: { type: 'spring', stiffness: 500, damping: 30 },
-  },
-  exit: {
-    opacity: 0,
-    x: 20,
-    transition: { duration: 0.08 },
-  },
-}
-
-/** 收缩态笔图标：从左侧滑入 */
-const penIconVariants = {
-  initial: { x: -15, opacity: 0, scale: 0.8 },
-  animate: {
-    x: 0,
-    opacity: 1,
-    scale: 1,
-    transition: { type: 'spring', stiffness: 500, damping: 25 },
-  },
-  exit: {
-    x: -15,
-    opacity: 0,
-    transition: { duration: 0.12 },
-  },
 }
 
 /**
@@ -141,19 +64,13 @@ export function ManagementPanel({
             }
       }
     >
-      <AnimatePresence mode="wait">
-        {isOpen ? (
-          <motion.div
+      {isOpen ? (
+          <div
             key="expanded-panel"
-            variants={isMobile ? mobilePanelVariants : desktopPanelVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="bg-background/95 border-border flex items-center gap-1 overflow-hidden rounded-3xl border px-3 shadow-2xl backdrop-blur-md"
-            style={{ height: 48 }}
+            className="bg-background/95 border-border flex h-12 animate-[management-panel-in_250ms_ease-out] items-center gap-1 overflow-hidden rounded-3xl border px-3 shadow-2xl backdrop-blur-md motion-reduce:animate-none"
           >
             {/* 全选/取消 */}
-            <motion.div variants={itemVariants}>
+            <div className="animate-[management-item-in_220ms_40ms_ease-out_both] motion-reduce:animate-none">
               <Button
                 variant="ghost"
                 size="sm"
@@ -172,18 +89,17 @@ export function ManagementPanel({
                   </>
                 )}
               </Button>
-            </motion.div>
+            </div>
 
             {/* 计数 */}
-            <motion.span
-              variants={itemVariants}
-              className="text-muted-foreground shrink-0 text-sm tabular-nums"
+            <span
+              className="text-muted-foreground animate-[management-item-in_220ms_80ms_ease-out_both] shrink-0 text-sm tabular-nums motion-reduce:animate-none"
             >
               {selectedCount}/{totalCount}
-            </motion.span>
+            </span>
 
             {/* 清空 */}
-            <motion.div variants={itemVariants}>
+            <div className="animate-[management-item-in_220ms_120ms_ease-out_both] motion-reduce:animate-none">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -213,16 +129,15 @@ export function ManagementPanel({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </motion.div>
+            </div>
 
             {/* 分隔线 */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-border mx-1 h-4 w-px shrink-0"
+            <div
+              className="bg-border mx-1 h-4 w-px shrink-0 animate-[management-item-in_220ms_160ms_ease-out_both] motion-reduce:animate-none"
             />
 
             {/* 删除选中 */}
-            <motion.div variants={itemVariants}>
+            <div className="animate-[management-item-in_220ms_200ms_ease-out_both] motion-reduce:animate-none">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -252,10 +167,10 @@ export function ManagementPanel({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </motion.div>
+            </div>
 
             {/* 退出按钮 */}
-            <motion.div variants={itemVariants}>
+            <div className="animate-[management-item-in_220ms_240ms_ease-out_both] motion-reduce:animate-none">
               <Button
                 variant="ghost"
                 size="sm"
@@ -264,15 +179,12 @@ export function ManagementPanel({
               >
                 <X className="size-4" />
               </Button>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         ) : (
-          <motion.div
+          <div
             key="collapsed-button"
-            variants={penIconVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
+            className="animate-[management-collapsed-in_180ms_ease-out] motion-reduce:animate-none"
           >
             <Button
               size="lg"
@@ -281,9 +193,8 @@ export function ManagementPanel({
             >
               <Edit3 className="size-5" />
             </Button>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   )
 }

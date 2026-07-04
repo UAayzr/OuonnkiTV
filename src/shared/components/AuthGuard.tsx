@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
 import { ArrowRight, Lock } from 'lucide-react'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
@@ -11,8 +10,6 @@ import { toast } from 'sonner'
 interface AuthGuardProps {
   children: React.ReactNode
 }
-
-const easeOutQuad = [0.25, 0.46, 0.45, 0.94] as const
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const { login, validateSession } = useAuthStore()
@@ -115,47 +112,35 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         className="fixed inset-0 z-[9999] flex flex-col bg-background md:flex-row"
       >
         {/* 左侧品牌区 — 移动端顶部横栏，桌面端左侧半屏 */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, ease: easeOutQuad }}
-          className="relative flex shrink-0 flex-col items-center justify-center overflow-hidden bg-muted/40 px-8 py-12 md:w-1/2 md:py-0"
+        <div
+          className="relative flex shrink-0 animate-[auth-fade-in_600ms_cubic-bezier(0.25,0.46,0.45,0.94)] flex-col items-center justify-center overflow-hidden bg-muted/40 px-8 py-12 motion-reduce:animate-none md:w-1/2 md:py-0"
         >
           {/* 装饰性模糊光晕 */}
           <div className="pointer-events-none absolute -top-20 -left-20 size-72 rounded-full bg-primary/10 blur-3xl" />
           <div className="pointer-events-none absolute -right-16 -bottom-16 size-56 rounded-full bg-primary/5 blur-3xl" />
 
           <div className="relative flex flex-col items-center gap-4">
-            <motion.div
-              initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ duration: 0.5, delay: 0.1, ease: easeOutQuad }}
-              className="flex flex-col items-center gap-3"
+            <div
+              className="flex animate-[auth-rise-in_500ms_100ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] flex-col items-center gap-3 motion-reduce:animate-none"
             >
               <OkiLogo size={80} />
               <div className="text-xl font-bold tracking-widest">UAayZR TV</div>
-            </motion.div>
+            </div>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.25, ease: easeOutQuad }}
-              className="max-w-xs text-center text-sm text-muted-foreground"
+            <p
+              className="max-w-xs animate-[auth-fade-in_500ms_250ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] text-center text-sm text-muted-foreground motion-reduce:animate-none"
             >
               你的私人流媒体影院
-            </motion.p>
+            </p>
           </div>
-        </motion.div>
+        </div>
 
         {/* 右侧表单区 — 移动端占满剩余空间，桌面端右侧半屏 */}
         <div className="flex flex-1 flex-col items-center justify-center px-8 py-12 md:px-16">
           <div className="w-full max-w-sm space-y-8">
             {/* 信息区域 */}
-            <motion.div
-              initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ duration: 0.5, delay: 0.15, ease: easeOutQuad }}
-              className="space-y-4"
+            <div
+              className="animate-[auth-rise-in_500ms_150ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] space-y-4 motion-reduce:animate-none"
             >
               <div className="flex size-12 items-center justify-center rounded-xl bg-muted/70 ring-1 ring-border/60">
                 <Lock className="size-5 text-muted-foreground" />
@@ -166,13 +151,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
                   当前站点通过密码保护，请输入访问密码以继续
                 </p>
               </div>
-            </motion.div>
+            </div>
 
             {/* 表单区域 */}
-            <motion.div
-              initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ duration: 0.5, delay: 0.25, ease: easeOutQuad }}
+            <div
+              className="animate-[auth-rise-in_500ms_250ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] motion-reduce:animate-none"
             >
               <div className="flex items-center gap-2">
                 <Input
@@ -193,7 +176,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
                   {isLoading ? <Spinner size="sm" /> : <ArrowRight className="size-5" />}
                 </Button>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>

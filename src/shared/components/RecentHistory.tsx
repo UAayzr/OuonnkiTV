@@ -14,7 +14,6 @@ import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { isBrowser } from 'react-device-detect'
 import clsx from 'clsx'
-import { motion } from 'framer-motion'
 import type { ViewingHistoryItem } from '@/shared/types'
 import { buildHistoryPlayPath, getHistoryItemKey } from '@/shared/lib/viewingHistory'
 
@@ -82,11 +81,8 @@ const HistoryList = ({
                     </Badge>
                     <div className="flex items-center justify-center gap-[.6rem] text-[3.5cqw] text-gray-500 md:text-sm">
                       <p>{dayjs(item.timestamp).fromNow()}</p>
-                      <motion.div
-                        initial={{ color: '#888888' }}
-                        whileHover={{ color: '#d6204b', backgroundColor: '#f0f0f0' }}
-                        transition={{ duration: 0.4 }}
-                        className="flex h-[1.5rem] w-[1.5rem] items-center justify-center rounded-full"
+                      <div
+                        className="flex h-[1.5rem] w-[1.5rem] items-center justify-center rounded-full text-[#888888] transition-colors duration-300 hover:bg-[#f0f0f0] hover:text-[#d6204b]"
                         onClick={e => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -94,7 +90,7 @@ const HistoryList = ({
                         }}
                       >
                         <TrashIcon size={16} />
-                      </motion.div>
+                      </div>
                     </div>
                   </div>
                   <div className="line-clamp-1 text-[4.5cqw] font-bold text-gray-700 transition-colors duration-200 group-hover:text-indigo-400 group-hover:underline md:text-lg">
@@ -145,16 +141,13 @@ export default function RecentHistory() {
                 <div className="text-center text-lg font-bold text-gray-800">观看记录</div>
                 <div className="flex flex-1 items-center justify-end">
                   {viewingHistory.length > 0 && (
-                    <motion.div
-                      initial={{ color: '#aaaaaa' }}
-                      whileHover={{ color: '#666666' }}
-                      transition={{ duration: 0.4 }}
-                      className="flex items-center justify-center gap-1 pr-3 hover:cursor-pointer"
+                    <div
+                      className="flex items-center justify-center gap-1 pr-3 text-[#aaaaaa] transition-colors duration-300 hover:cursor-pointer hover:text-[#666666]"
                       onClick={clearViewingHistory}
                     >
                       <CloseIcon size={16} />
                       <p className="text-sm">清除历史</p>
-                    </motion.div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -184,11 +177,8 @@ export default function RecentHistory() {
                 <div className="text-center text-2xl font-bold text-gray-800">观看记录</div>
                 <div className="flex flex-1 items-center justify-end">
                   {viewingHistory.length > 0 && (
-                    <motion.div
-                      initial={{ color: '#aaaaaa' }}
-                      whileHover={{ color: '#666666' }}
-                      transition={{ duration: 0.4 }}
-                      className="flex items-center justify-center gap-1"
+                    <div
+                      className="flex items-center justify-center gap-1 text-[#aaaaaa] transition-colors duration-300 hover:text-[#666666]"
                       onClick={e => {
                         e.stopPropagation()
                         clearViewingHistory()
@@ -196,7 +186,7 @@ export default function RecentHistory() {
                     >
                       <CloseIcon size={20} />
                       <p className="text-base">清除历史</p>
-                    </motion.div>
+                    </div>
                   )}
                 </div>
               </div>

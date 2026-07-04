@@ -30,13 +30,11 @@ export default defineConfig({
           if (id.includes('/artplayer/')) return 'artplayer-vendor'
           if (id.includes('/hls.js/')) return 'hls-vendor'
 
-          // UI 与动效
-          if (id.includes('/framer-motion/')) return 'motion-vendor'
+          // UI primitives
           if (id.includes('/@radix-ui/')) return 'radix-vendor'
 
           // 其他常用库
           if (id.includes('/zustand/')) return 'state-vendor'
-          if (id.includes('/tmdb-ts/')) return 'tmdb-vendor'
           if (id.includes('/dayjs/')) return 'dayjs-vendor'
         },
       },

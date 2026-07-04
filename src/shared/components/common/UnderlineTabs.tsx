@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
 import { cn } from '@/shared/lib'
 
 export interface UnderlineTabOption<TKey extends string = string> {
@@ -116,14 +115,13 @@ export function UnderlineTabs<TKey extends string = string>({
                   {option.label}
                 </span>
                 {isActive ? (
-                  <motion.span
-                    layoutId={layoutId}
+                  <span
+                    data-layout-id={layoutId}
                     className={cn(
-                      'absolute right-0 bottom-0 left-0 h-0.5 rounded-full bg-primary',
+                      'absolute right-0 bottom-0 left-0 h-0.5 animate-[underline-in_180ms_ease-out] rounded-full bg-primary motion-reduce:animate-none',
                       option.indicatorClassName,
                       indicatorClassName,
                     )}
-                    transition={{ type: 'spring', stiffness: 420, damping: 38, mass: 0.35 }}
                   />
                 ) : null}
               </button>

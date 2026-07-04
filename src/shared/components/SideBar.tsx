@@ -13,7 +13,6 @@ import {
   useSidebar,
 } from '@/shared/components/ui/sidebar'
 import { NavLink } from 'react-router'
-import { motion } from 'framer-motion'
 import { Home, Search, Star, History, Settings } from 'lucide-react'
 import { OkiLogo } from '@/shared/components/icons'
 import { useVersionStore } from '../store'
@@ -119,15 +118,7 @@ export default function SideBar({
                       data-mactive={location.pathname === item.url}
                     >
                       {location.pathname === item.url && (
-                        <motion.div
-                          layoutId="sidebar-selected-item"
-                          className="bg-sidebar-primary/15 absolute top-0 left-0 h-full w-full rounded-md"
-                          transition={{
-                            type: 'spring',
-                            stiffness: 300,
-                            damping: 30,
-                          }}
-                        />
+                        <div className="bg-sidebar-primary/15 absolute top-0 left-0 h-full w-full animate-[active-bg-in_180ms_ease-out] rounded-md motion-reduce:animate-none" />
                       )}
                       <item.icon className="z-1" />
                       <span className="z-1">{item.title}</span>

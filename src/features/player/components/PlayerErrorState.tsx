@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { VideoCameraSlash } from '@phosphor-icons/react'
+import { VideoOff } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { cn } from '@/shared/lib/utils'
 
@@ -54,8 +54,7 @@ export function PlayerErrorState({
     >
       <section className="w-full max-w-lg">
         <div className="flex flex-col items-center gap-4 text-center">
-          <VideoCameraSlash
-            weight="duotone"
+          <VideoOff
             className="size-28 text-foreground/68 md:size-32"
             aria-hidden="true"
           />

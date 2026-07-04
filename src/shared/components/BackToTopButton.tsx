@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronUp } from 'lucide-react'
 import { useLocation } from 'react-router'
 import { Button } from '@/shared/components/ui/button'
@@ -78,29 +77,26 @@ export default function BackToTopButton({
         className,
       )}
     >
-      <AnimatePresence>
-        {visible && scrollTarget && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.92 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="pointer-events-auto"
+      {scrollTarget && (
+        <div
+          className={cn(
+            'pointer-events-auto transform-gpu transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
+            visible ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-2 scale-95 opacity-0',
+          )}
+        >
+          <Button
+            type="button"
+            size="icon-lg"
+            variant="outline"
+            aria-label="回到顶部"
+            title="回到顶部"
+            className="bg-background/90 rounded-full shadow-lg backdrop-blur-sm"
+            onClick={() => scrollToTop(scrollTarget)}
           >
-            <Button
-              type="button"
-              size="icon-lg"
-              variant="outline"
-              aria-label="回到顶部"
-              title="回到顶部"
-              className="bg-background/90 rounded-full shadow-lg backdrop-blur-sm"
-              onClick={() => scrollToTop(scrollTarget)}
-            >
-              <ChevronUp className="size-6" />
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <ChevronUp className="size-6" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

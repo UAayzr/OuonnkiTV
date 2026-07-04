@@ -2,13 +2,10 @@ import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import Artplayer from 'artplayer'
-import type Hls from 'hls.js'
-import type { HlsConfig } from 'hls.js'
-import { createHlsLoaderClass, createM3u8Processor } from '@ouonnki/cms-core/m3u8'
-import _ from 'lodash'
 import { toast } from 'sonner'
 import { Spinner } from '@/shared/components/ui/spinner'
-import { useDocumentTitle, useCmsClient } from '@/shared/hooks'
+import { useDocumentTitle, useCmsClient, useIdleReady } from '@/shared/hooks'
+import { throttle } from '@/shared/lib/throttle'
 import { useApiStore } from '@/shared/store/apiStore'
 import { useSettingStore } from '@/shared/store/settingStore'
 import { useViewingHistoryStore } from '@/shared/store/viewingHistoryStore'
@@ -27,46 +24,12 @@ import {
   usePlayerGestureOverlays,
   usePlayerNotices,
 } from '@/features/player/hooks'
-import { computeMiniPlayerRect, validatePlayerRoute } from '@/features/player/lib'
-
-interface ArtplayerWithHls extends Artplayer {
-  hls?: Hls
-}
+import { attachHlsPlayback, computeMiniPlayerRect, validatePlayerRoute } from '@/features/player/lib'
 
 interface PlayerRouteParams {
   [key: string]: string | undefined
   sourceCode?: string
   vodId?: string
-}
-
-const m3u8Processor = createM3u8Processor({ filterAds: true })
-type HlsConstructor = typeof import('hls.js')['default']
-
-let hlsConstructorPromise: Promise<HlsConstructor> | null = null
-let customHlsLoaderClass: ReturnType<typeof createHlsLoaderClass> | null = null
-
-const getHlsConstructor = async (): Promise<HlsConstructor> => {
-  if (!hlsConstructorPromise) {
-    hlsConstructorPromise = import('hls.js/dist/hls.light.mjs')
-      .then(module => module.default as HlsConstructor)
-      .catch(error => {
-        hlsConstructorPromise = null
-        throw error
-      })
-  }
-
-  return hlsConstructorPromise
-}
-
-const getCustomHlsLoaderClass = (HlsClass: HlsConstructor) => {
-  if (!customHlsLoaderClass) {
-    customHlsLoaderClass = createHlsLoaderClass({
-      m3u8Processor,
-      Hls: HlsClass,
-    })
-  }
-
-  return customHlsLoaderClass
 }
 
 const parseEpisodeIndex = (value: string | null): number => {
@@ -288,38 +251,13 @@ export default function UnifiedPlayer() {
       },
       customType: {
         m3u8: function (video: HTMLMediaElement, url: string, artInstance: Artplayer) {
-          const artWithHls = artInstance as ArtplayerWithHls
-          void (async () => {
-            try {
-              const HlsClass = await getHlsConstructor()
-              if (playerRef.current !== artInstance) return
-
-              if (HlsClass.isSupported()) {
-                if (artWithHls.hls) artWithHls.hls.destroy()
-                const hlsConfig: Partial<HlsConfig> = adFilteringEnabled
-                  ? {
-                      loader: getCustomHlsLoaderClass(HlsClass) as unknown as typeof HlsClass.DefaultConfig.loader,
-                    }
-                  : {}
-                const hls = new HlsClass(hlsConfig)
-                hls.loadSource(url)
-                hls.attachMedia(video)
-                artWithHls.hls = hls
-                artInstance.on('destroy', () => hls.destroy())
-              } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url
-              } else {
-                artInstance.notice.show = 'Unsupported playback format: m3u8'
-              }
-            } catch (loadError) {
-              console.error('加载 HLS 播放内核失败:', loadError)
-              if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url
-              } else {
-                artInstance.notice.show = '播放内核加载失败，请稍后重试'
-              }
-            }
-          })()
+          attachHlsPlayback({
+            video,
+            url,
+            art: artInstance,
+            adFilteringEnabled,
+            isCurrentPlayer: () => playerRef.current === artInstance,
+          })
         },
       },
     })
@@ -360,7 +298,7 @@ export default function UnifiedPlayer() {
       syncFullscreenMiniProgressBar()
     }
 
-    const handleControlViewportChange = _.throttle(() => {
+    const handleControlViewportChange = throttle(() => {
       syncMobileControlBar()
     }, 120)
 
@@ -433,7 +371,7 @@ export default function UnifiedPlayer() {
       }
     }
 
-    const throttledTimeUpdate = _.throttle(timeUpdateHandler, 3000)
+    const throttledTimeUpdate = throttle(timeUpdateHandler, 3000)
     art.on('video:timeupdate', throttledTimeUpdate)
 
     let miniCleanup: (() => void) | undefined
@@ -468,12 +406,12 @@ export default function UnifiedPlayer() {
           miniEl.style.left = `${rect.left}px`
         }
 
-        const handleViewportChange = _.throttle(() => {
+        const handleViewportChange = throttle(() => {
           if (!isMini) return
           requestAnimationFrame(applyMiniPosition)
         }, 120)
 
-        const checkVisibility = _.throttle(() => {
+        const checkVisibility = throttle(() => {
           if (!playerRef.current) return
 
           const scrollRect = scrollViewport.getBoundingClientRect()
@@ -592,6 +530,7 @@ export default function UnifiedPlayer() {
   const primaryError = routeError || error
   const shouldShowLoading = loading && !detail
   const modeLabel = 'CMS 直连模式'
+  const canRenderSecondaryInfo = useIdleReady(700)
 
   useDocumentTitle(pageTitle)
 
@@ -720,21 +659,23 @@ export default function UnifiedPlayer() {
         </aside>
       </section>
 
-      <PlayerInfoAndRecommendations
-        title={title}
-        overview={overview}
-        sourceName={sourceName}
-        modeLabel={modeLabel}
-        year={detail.videoInfo?.year}
-        area={detail.videoInfo?.area}
-        category={detail.videoInfo?.type}
-        cmsCover={detail.videoInfo?.cover}
-        episodeCount={detail.episodes.length}
-        favoriteAction={{
-          active: cmsFavoriteActive,
-          onToggle: handleToggleCmsFavorite,
-        }}
-      />
+      {canRenderSecondaryInfo && (
+        <PlayerInfoAndRecommendations
+          title={title}
+          overview={overview}
+          sourceName={sourceName}
+          modeLabel={modeLabel}
+          year={detail.videoInfo?.year}
+          area={detail.videoInfo?.area}
+          category={detail.videoInfo?.type}
+          cmsCover={detail.videoInfo?.cover}
+          episodeCount={detail.episodes.length}
+          favoriteAction={{
+            active: cmsFavoriteActive,
+            onToggle: handleToggleCmsFavorite,
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,4 @@
 import { Play } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
 import type { MouseEvent } from 'react'
 import { NavLink } from 'react-router'
 import { AspectRatio } from '@/shared/components/ui/aspect-ratio'
@@ -82,22 +81,14 @@ export function ViewingHistoryCard({
       )}
     >
       {selectionMode && (
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.7, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.7, y: -4 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute top-2 right-2 z-20"
-          >
-            <Checkbox
-              checked={selected}
-              onCheckedChange={handleSelect}
-              onClick={event => event.stopPropagation()}
-              className="bg-background/80 border-white/70 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shadow-sm"
-            />
-          </motion.div>
-        </AnimatePresence>
+        <div className="absolute top-2 right-2 z-20 animate-[auth-rise-in_180ms_ease-out] motion-reduce:animate-none">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={handleSelect}
+            onClick={event => event.stopPropagation()}
+            className="bg-background/80 border-white/70 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shadow-sm"
+          />
+        </div>
       )}
 
       <AspectRatio ratio={1.778}>
@@ -157,22 +148,14 @@ export function ViewingHistoryCard({
       )}
     >
       {selectionMode && (
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.7, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.7, y: -4 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute top-2 right-2 z-20"
-          >
-            <Checkbox
-              checked={selected}
-              onCheckedChange={handleSelect}
-              onClick={event => event.stopPropagation()}
-              className="bg-background/80 border-white/70 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shadow-sm"
-            />
-          </motion.div>
-        </AnimatePresence>
+        <div className="absolute top-2 right-2 z-20 animate-[auth-rise-in_180ms_ease-out] motion-reduce:animate-none">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={handleSelect}
+            onClick={event => event.stopPropagation()}
+            className="bg-background/80 border-white/70 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shadow-sm"
+          />
+        </div>
       )}
 
       <div className="flex items-start gap-2.5 p-2">

@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/shared/components/ui/button'
 
 interface HistoryHeaderProps {
@@ -13,21 +12,6 @@ interface HistoryHeaderProps {
   onDeselectAll: () => void
   onOpenBatchDelete: () => void
   onOpenClearAll: () => void
-}
-
-const ACTION_TRANSITION_VARIANTS = {
-  enter: (direction: number) => ({
-    opacity: 0,
-    x: direction > 0 ? 24 : -24,
-  }),
-  center: {
-    opacity: 1,
-    x: 0,
-  },
-  exit: (direction: number) => ({
-    opacity: 0,
-    x: direction > 0 ? -24 : 24,
-  }),
 }
 
 export function HistoryHeader({
@@ -99,40 +83,20 @@ export function HistoryHeader({
           </span>
         </div>
 
-        <div className="ml-auto relative shrink-0">
+        <div className="relative ml-auto shrink-0">
           <div className="invisible pointer-events-none" aria-hidden>
             {renderEditingActions()}
           </div>
 
-          <AnimatePresence mode="sync" initial={false} custom={actionDirection}>
-            {selectionMode ? (
-              <motion.div
-                key="editing-actions"
-                custom={actionDirection}
-                variants={ACTION_TRANSITION_VARIANTS}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="absolute inset-y-0 right-0 flex items-center"
-              >
-                {renderEditingActions()}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="default-actions"
-                custom={actionDirection}
-                variants={ACTION_TRANSITION_VARIANTS}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="absolute inset-y-0 right-0 flex items-center"
-              >
-                {renderDefaultActions()}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div
+            key={selectionMode ? 'editing-actions' : 'default-actions'}
+            className="absolute inset-y-0 right-0 flex animate-[history-actions-in_200ms_ease-out] items-center motion-reduce:animate-none"
+            style={{
+              '--history-action-x': `${actionDirection > 0 ? 24 : -24}px`,
+            } as React.CSSProperties}
+          >
+            {selectionMode ? renderEditingActions() : renderDefaultActions()}
+          </div>
         </div>
       </div>
     </header>

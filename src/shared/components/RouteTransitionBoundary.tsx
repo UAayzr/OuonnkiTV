@@ -15,9 +15,9 @@ interface RouteTransitionBoundaryState {
 /**
  * 路由过渡兜底错误边界。
  *
- * AnimatePresence 与 Suspense 在快速路由切换时存在 DOM 失步风险（commit
- * 阶段 React 想 removeChild 一个已被 motion 挪走的节点）。本边界仅吞下
- * 这一类可确定恢复的错误：bump 内部 resetKey 强制子树重新挂载，避免红屏。
+ * 快速路由切换与 Suspense 组合时仍可能出现 DOM 失步风险（commit 阶段
+ * React 想 removeChild 一个已经不在父级下的节点）。本边界仅吞下这一类
+ * 可确定恢复的错误：bump 内部 resetKey 强制子树重新挂载，避免红屏。
  *
  * 不吞下其他错误：会在 render 阶段重新抛出，交由现有外层错误边界处理。
  */
@@ -41,7 +41,7 @@ export default class RouteTransitionBoundary extends Component<
 
     if (import.meta.env.DEV) {
       console.warn(
-        '[RouteTransitionBoundary] recovered from a motion/Suspense DOM race:',
+        '[RouteTransitionBoundary] recovered from a route/Suspense DOM race:',
         error instanceof Error ? error.message : error,
         info.componentStack,
       )

@@ -4,7 +4,6 @@ import { SidebarTrigger } from '@/shared/components/ui/sidebar'
 import { NavLink, useLocation } from 'react-router'
 import { useState } from 'react'
 import { Moon, Sun, Laptop } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 
 import { Button } from '@/shared/components/ui/button'
 import { ThemeToggle, useThemeState } from './theme'
@@ -74,21 +73,11 @@ export default function Navigation({ hidden = false, enableScrollAnimation = fal
             <div className="flex-1" />
 
             {/* 搜索框组件 - 搜索页面时隐藏 */}
-            <AnimatePresence mode="wait">
-              {!isSearchPage && (
-                <motion.div
-                  key="navbar-search"
-                  layoutId="main-search-box"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  className="flex flex-auto items-center"
-                >
-                  <SearchBox onMobileSearchChange={setIsMobileSearchOpen} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {!isSearchPage && (
+              <div className="flex flex-auto animate-[nav-search-in_180ms_ease-out] items-center motion-reduce:animate-none">
+                <SearchBox onMobileSearchChange={setIsMobileSearchOpen} />
+              </div>
+            )}
 
             <div
               className={cn(

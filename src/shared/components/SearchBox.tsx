@@ -1,15 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Search, X, ArrowLeft, History, Trash2 } from 'lucide-react'
-import { motion } from 'framer-motion'
 
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
 import { Popover, PopoverContent, PopoverAnchor } from '@/shared/components/ui/popover'
 import { useSearch, useSearchHistory } from '@/shared/hooks'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
-
-// 创建支持 motion 的 Button 组件
-const MotionButton = motion.create(Button)
 
 interface SearchBoxProps {
   /** 移动端搜索框展开状态变化回调，用于父组件调整布局 */
@@ -255,21 +251,20 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
                     <X size={16} />
                   </button>
                 )}
-                <MotionButton
+                <Button
                   disabled={inputContent.length === 0}
                   className="dark:bg-accent dark:hover:bg-accent h-9 w-12 rounded-full rounded-l-none bg-gray-200 hover:bg-gray-300"
                   onClick={() => {
                     searchMovie(inputContent)
                     setIsDropdownOpen(false)
                   }}
-                  layout
                 >
                   {isMobileSearchOpen && (
-                    <motion.span layoutId="mobile-search-icon">
+                    <span className="animate-[active-bg-in_160ms_ease-out] motion-reduce:animate-none">
                       <Search className="text-primary" size={18} />
-                    </motion.span>
+                    </span>
                   )}
-                </MotionButton>
+                </Button>
               </div>
             </div>
           </PopoverAnchor>
@@ -285,19 +280,18 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
       </div>
 
       {/* 移动端搜索触发按钮 */}
-      <MotionButton
+      <Button
         size="icon"
         variant="ghost"
         className="size-7 sm:hidden"
         onClick={openMobileSearch}
-        layout
       >
         {!isMobileSearchOpen && (
-          <motion.span layoutId="mobile-search-icon">
+          <span className="animate-[active-bg-in_160ms_ease-out] motion-reduce:animate-none">
             <Search className="text-primary" size={20} />
-          </motion.span>
+          </span>
         )}
-      </MotionButton>
+      </Button>
 
       {/* 用于传递移动端搜索状态给父组件的隐藏元素 */}
       <input type="hidden" data-mobile-search-open={isMobileSearchOpen} />

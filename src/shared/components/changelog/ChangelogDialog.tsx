@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Dialog,
   DialogContent,
@@ -8,7 +7,6 @@ import {
 } from '@/shared/components/ui/dialog'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
-import { animationPresets } from '@/shared/lib/animationVariants'
 import { VersionTimeline } from './VersionTimeline'
 import { VersionDetail } from './VersionDetail'
 
@@ -64,17 +62,12 @@ export function ChangelogDialog({ isOpen, onClose, versions }: ChangelogDialogPr
 
             <ScrollArea className="flex-1">
               <div className="p-5">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={selectedVersion.version}
-                    variants={animationPresets.slideX}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                  >
-                    <VersionDetail version={selectedVersion} />
-                  </motion.div>
-                </AnimatePresence>
+                <div
+                  key={selectedVersion.version}
+                  className="animate-[slide-x-in_220ms_ease-out] motion-reduce:animate-none"
+                >
+                  <VersionDetail version={selectedVersion} />
+                </div>
               </div>
             </ScrollArea>
           </div>

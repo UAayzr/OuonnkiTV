@@ -2,7 +2,6 @@ import { useTheme } from '@/shared/components/theme'
 import { useRef } from 'react'
 import { Palette, Sun, Moon, Monitor } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
-import { motion } from 'framer-motion'
 import { cn } from '@/shared/lib'
 import { SettingsItem, SettingsSection } from '../common'
 
@@ -59,15 +58,7 @@ export default function ThemeSettings() {
                 <Icon className="size-3.5 shrink-0" />
                 <span className="whitespace-nowrap leading-none">{option.label}</span>
                 {isActive ? (
-                  <motion.span
-                    layoutId="theme-mode-indicator"
-                    className="bg-background absolute inset-0 -z-10 rounded-full shadow-sm"
-                    transition={{
-                      type: 'spring',
-                      stiffness: 400,
-                      damping: 30,
-                    }}
-                  />
+                  <span className="bg-background absolute inset-0 -z-10 animate-[active-bg-in_180ms_ease-out] rounded-full shadow-sm motion-reduce:animate-none" />
                 ) : null}
               </button>
             )

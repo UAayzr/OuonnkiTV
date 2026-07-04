@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { Badge } from '@/shared/components/ui/badge'
 import { cn } from '@/shared/lib'
 import { CATEGORY_CONFIG, type CategoryKey } from './constants'
@@ -6,21 +5,6 @@ import { CATEGORY_CONFIG, type CategoryKey } from './constants'
 interface VersionCategoryCardProps {
   category: CategoryKey
   items: string[]
-}
-
-const listVariants = {
-  animate: {
-    transition: { staggerChildren: 0.04, delayChildren: 0.1 },
-  },
-}
-
-const itemVariants = {
-  initial: { opacity: 0, x: -12 },
-  animate: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.25, ease: 'easeOut' },
-  },
 }
 
 export function VersionCategoryCard({ category, items }: VersionCategoryCardProps) {
@@ -46,23 +30,18 @@ export function VersionCategoryCard({ category, items }: VersionCategoryCardProp
         </Badge>
       </div>
 
-      <motion.ul
-        className="space-y-1.5"
-        variants={listVariants}
-        initial="initial"
-        animate="animate"
-      >
+      <ul className="space-y-1.5">
         {items.map((item, index) => (
-          <motion.li
+          <li
             key={index}
-            variants={itemVariants}
-            className="flex items-start gap-2 text-sm"
+            className="flex animate-[changelog-item-in_220ms_ease-out_both] items-start gap-2 text-sm motion-reduce:animate-none"
+            style={{ animationDelay: `${Math.min(index * 40, 240)}ms` }}
           >
             <span className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', config.dot)} />
             <span className="text-foreground leading-relaxed">{item}</span>
-          </motion.li>
+          </li>
         ))}
-      </motion.ul>
+      </ul>
     </div>
   )
 }

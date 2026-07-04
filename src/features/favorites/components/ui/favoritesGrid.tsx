@@ -30,6 +30,21 @@ import type { FavoriteItem } from '../../types/favorites'
 import { getSourceColorScheme } from '@/shared/lib/source-colors'
 import { buildCmsPlayPath } from '@/shared/lib/routes'
 import { toast } from 'sonner'
+import { useWindowedGrid } from '@/shared/hooks/useWindowedGrid'
+
+const FAVORITES_GRID_BREAKPOINTS = [
+  { minWidth: 1536, columns: 8 },
+  { minWidth: 1280, columns: 7 },
+  { minWidth: 1024, columns: 6 },
+  { minWidth: 768, columns: 5 },
+  { minWidth: 640, columns: 4 },
+  { minWidth: 0, columns: 2 },
+]
+
+const FAVORITES_GRID_GAP = 12
+const FAVORITES_TITLE_HEIGHT = 32
+const estimateFavoriteRowHeight = (cardWidth: number) =>
+  cardWidth * 1.5 + FAVORITES_TITLE_HEIGHT + FAVORITES_GRID_GAP
 
 /** 观看状态配置 */
 const watchStatusOptions = [
@@ -85,6 +100,14 @@ export function FavoritesGrid({
 }: FavoritesGridProps) {
   // 待确认删除的收藏项 ID
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const windowedGrid = useWindowedGrid({
+    items: favorites,
+    minItems: 60,
+    breakpoints: FAVORITES_GRID_BREAKPOINTS,
+    estimateItemHeight: estimateFavoriteRowHeight,
+    gap: FAVORITES_GRID_GAP,
+    overscanRows: 3,
+  })
 
   // 处理单个项的选中状态切换
   const toggleItemSelection = useCallback(
@@ -116,8 +139,10 @@ export function FavoritesGrid({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
-        {favorites.map(item => {
+      <div ref={windowedGrid.containerRef}>
+        {windowedGrid.topPadding > 0 && <div style={{ height: windowedGrid.topPadding }} />}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
+        {windowedGrid.visibleItems.map(({ item }) => {
           const cardProps = favoriteToPosterCard(item)
           const isSelected = selectedIds.has(item.id)
 
@@ -208,6 +233,8 @@ export function FavoritesGrid({
             </ContextMenu>
           )
         })}
+        </div>
+        {windowedGrid.bottomPadding > 0 && <div style={{ height: windowedGrid.bottomPadding }} />}
       </div>
 
       {/* 单项删除确认弹窗 */}

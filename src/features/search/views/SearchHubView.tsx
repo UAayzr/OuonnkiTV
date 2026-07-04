@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
-import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useDocumentTitle, useSearchHistory } from '@/shared/hooks'
 import { useSearchStore } from '@/shared/store/searchStore'
@@ -72,48 +71,27 @@ export default function SearchHubView() {
       className={`flex flex-col gap-6 p-4 pb-8 transition-all duration-300 ${isDirectCentered ? 'min-h-[60vh] justify-center' : ''}`}
     >
       {/* 搜索区域 */}
-      <motion.div
-        layout
-        className="flex w-full flex-col items-center gap-4"
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      >
+      <div className="flex w-full flex-col items-center gap-4 transition-[gap,transform] duration-300 ease-out motion-reduce:transition-none">
         {/* 品牌标识 - 无搜索内容时显示 */}
-        <AnimatePresence>
-          {!query && (
-            <motion.div
-              layout
-              className="flex flex-col items-center gap-2"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <OkiLogo size={56} />
-              <span className="text-muted-foreground text-sm tracking-wide">发现你的下一部好剧</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {!query && (
+          <div className="flex animate-[search-brand-in_200ms_ease-out] flex-col items-center gap-2 motion-reduce:animate-none">
+            <OkiLogo size={56} />
+            <span className="text-muted-foreground text-sm tracking-wide">发现你的下一部好剧</span>
+          </div>
+        )}
 
         {/* 搜索框 */}
-        <motion.div layout className="flex w-full justify-center">
+        <div className="flex w-full justify-center">
           <SearchHubInput
             initialQuery={query}
             onSearch={handleSearch}
             onClear={handleClear}
           />
-        </motion.div>
+        </div>
 
         {/* 搜索历史徽标 */}
-        <AnimatePresence mode="popLayout">
-          {!query && searchHistory.length > 0 && (
-            <motion.div
-              layout
-              className="flex w-full max-w-3xl flex-col gap-2"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.2 }}
-            >
+        {!query && searchHistory.length > 0 && (
+            <div className="flex w-full max-w-3xl animate-[route-fade-in_200ms_ease-out] flex-col gap-2 motion-reduce:animate-none">
               <div className="flex items-center justify-between px-1">
                 <span className="text-muted-foreground text-xs">最近搜索</span>
                 <button
@@ -154,16 +132,13 @@ export default function SearchHubView() {
                   </button>
                 ))}
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
-      </motion.div>
+      </div>
 
       {/* 结果区域 */}
       <div className="flex w-full flex-col gap-6">
-        <AnimatePresence mode="wait">
-          <SearchDirectSection key="direct" query={query} />
-        </AnimatePresence>
+        <SearchDirectSection key="direct" query={query} />
       </div>
     </div>
   )

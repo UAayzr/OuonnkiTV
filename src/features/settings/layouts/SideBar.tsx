@@ -1,5 +1,4 @@
 import { type SettingModuleList } from '@/shared/types'
-import { motion } from 'framer-motion'
 import { cn } from '@/shared/lib'
 
 export default function SideBar({
@@ -24,11 +23,7 @@ export default function SideBar({
           onClick={() => onSelect(module.id)}
         >
           {activeId === module.id && (
-            <motion.div
-              layoutId="sidebar-active-bg"
-              className="absolute inset-0 -z-10 rounded-lg bg-zinc-600/80 shadow-xl/30 shadow-zinc-900 backdrop-blur-xl"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
+            <div className="absolute inset-0 -z-10 animate-[active-bg-in_180ms_ease-out] rounded-lg bg-zinc-600/80 shadow-xl/30 shadow-zinc-900 backdrop-blur-xl motion-reduce:animate-none" />
           )}
           <span className="relative z-10">{module.icon}</span>
           <h2 className="relative z-10 font-medium">{module.name}</h2>

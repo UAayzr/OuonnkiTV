@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/shared/lib'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
@@ -39,11 +38,7 @@ function DesktopTimeline({ versions, selectedVersion, onSelectVersion }: Version
               className="relative flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors"
             >
               {isSelected && (
-                <motion.span
-                  layoutId="changelog-active"
-                  className="bg-muted/55 absolute inset-0 rounded-lg"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
+                <span className="bg-muted/55 absolute inset-0 animate-[active-bg-in_180ms_ease-out] rounded-lg motion-reduce:animate-none" />
               )}
 
               <span
@@ -123,21 +118,13 @@ function MobileAccordion({ versions }: { versions: VersionUpdate[] }) {
               />
             </button>
 
-            <AnimatePresence initial={false}>
-              {isExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  className="overflow-hidden"
-                >
-                  <div className="px-1 pt-2 pb-1">
-                    <VersionDetail version={version} />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {isExpanded && (
+              <div className="grid animate-[accordion-in_240ms_ease-out] overflow-hidden motion-reduce:animate-none">
+                <div className="min-h-0 px-1 pt-2 pb-1">
+                  <VersionDetail version={version} />
+                </div>
+              </div>
+            )}
           </div>
         )
       })}

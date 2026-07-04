@@ -3,9 +3,7 @@ import { cn } from '@/shared/lib'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { ArrowLeft, Compass, FolderCog, Info, ListVideo, Play, Settings2 } from 'lucide-react'
-import { motion } from 'framer-motion'
 import { CustomAnimatedOutlet } from '@/shared/components/AnimatedOutlet'
-import { animationPresets } from '@/shared/lib/animationVariants'
 import { UnderlineTabs } from '@/shared/components/common/UnderlineTabs'
 
 const settingsModules = [
@@ -135,12 +133,9 @@ export default function SettingsLayout() {
 
       <main className="w-full px-0 pt-2 md:px-4 md:pt-4">
         {activeModule.showGuide !== false ? (
-          <motion.section
+          <section
             key={`guide-${activeModule.id}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
-            className="from-muted/35 to-muted/20 border-border/70 mb-4 rounded-xl border border-dashed bg-gradient-to-r px-3 py-2.5 md:px-4 md:py-3"
+            className="from-muted/35 to-muted/20 border-border/70 mb-4 animate-[settings-guide-in_220ms_ease-out] rounded-xl border border-dashed bg-gradient-to-r px-3 py-2.5 motion-reduce:animate-none md:px-4 md:py-3"
           >
             <div className="flex items-start gap-2.5 md:gap-3">
               <div className="bg-background text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg border md:size-8">
@@ -171,10 +166,10 @@ export default function SettingsLayout() {
                 </div>
               </div>
             </div>
-          </motion.section>
+          </section>
         ) : null}
 
-        <CustomAnimatedOutlet variants={animationPresets.slideX} />
+        <CustomAnimatedOutlet />
       </main>
     </div>
   )

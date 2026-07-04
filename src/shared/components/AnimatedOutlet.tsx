@@ -1,20 +1,18 @@
 import { useLocation, useOutlet } from 'react-router'
-import { motion, type Variants } from 'framer-motion'
 import { useDeferredValue, useRef } from 'react'
-import { pageVariants } from '@/shared/lib/animationVariants'
 
 import { resolveAnimationKey, type RouteKey } from './animatedOutletKey'
 
 /**
  * AnimatedOutlet - 带页面过渡动画的 Outlet 包装组件
  *
- * 使用 framer-motion 实现路由进入动画。
+ * 使用 CSS 实现路由进入动画。
  * 动画效果：淡入 + 轻微的垂直位移 + 模糊效果
  *
  * 通过 useDeferredValue 把动画 key 解耦于实时 pathname：当目标路由仍处于
  * Suspense fallback 阶段时，deferred 值不会推进，内容也继续显示旧 outlet。
- * 这里不再使用路由级 exit 动画，避免旧路由 DOM 被 AnimatePresence 延迟卸载时
- * 与 React commit 删除阶段发生 removeChild 竞态。
+ * 这里不再使用路由级 exit 动画，避免旧路由 DOM 延迟卸载时与 React commit
+ * 删除阶段发生 removeChild 竞态。
  */
 export default function AnimatedOutlet() {
   const location = useLocation()
@@ -32,15 +30,12 @@ export default function AnimatedOutlet() {
   const displayedOutlet = isReady ? outlet : outletRef.current
 
   return (
-    <motion.div
+    <div
       key={deferredPathname}
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      className="h-full"
+      className="h-full animate-[route-fade-in_180ms_ease-out] motion-reduce:animate-none"
     >
       {displayedOutlet}
-    </motion.div>
+    </div>
   )
 }
 
@@ -49,7 +44,7 @@ export default function AnimatedOutlet() {
  * 支持自定义动画变体和类名
  */
 interface CustomAnimatedOutletProps {
-  variants?: Variants
+  variants?: unknown
   className?: string
   /** 是否启用动画，默认 true */
   enabled?: boolean
@@ -58,7 +53,6 @@ interface CustomAnimatedOutletProps {
 }
 
 export function CustomAnimatedOutlet({
-  variants = pageVariants,
   className = 'h-full',
   enabled = true,
   routeKey,
@@ -83,14 +77,11 @@ export function CustomAnimatedOutlet({
   const animationKey = resolveAnimationKey(deferredPathname, routeKey)
 
   return (
-    <motion.div
+    <div
       key={animationKey}
-      variants={variants}
-      initial="initial"
-      animate="animate"
-      className={className}
+      className={`${className} animate-[route-fade-in_180ms_ease-out] motion-reduce:animate-none`}
     >
       {displayedOutlet}
-    </motion.div>
+    </div>
   )
 }
