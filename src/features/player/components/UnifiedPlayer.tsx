@@ -4,7 +4,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import Artplayer from 'artplayer'
 import type Hls from 'hls.js'
 import type { HlsConfig } from 'hls.js'
-import { type DetailResult } from '@ouonnki/cms-core'
 import { createHlsLoaderClass, createM3u8Processor } from '@ouonnki/cms-core/m3u8'
 import _ from 'lodash'
 import { toast } from 'sonner'
@@ -22,7 +21,12 @@ import {
   PlayerInfoAndRecommendations,
   PlayerLoadingSkeleton,
 } from '@/features/player/components'
-import { useEpisodePagination, useMobilePlayerGestures } from '@/features/player/hooks'
+import {
+  useEpisodePagination,
+  usePlayerDetail,
+  usePlayerGestureOverlays,
+  usePlayerNotices,
+} from '@/features/player/hooks'
 import { computeMiniPlayerRect, validatePlayerRoute } from '@/features/player/lib'
 
 interface ArtplayerWithHls extends Artplayer {
@@ -33,13 +37,6 @@ interface PlayerRouteParams {
   [key: string]: string | undefined
   sourceCode?: string
   vodId?: string
-}
-
-interface PlayerTransientNotice {
-  id: string
-  message: string
-  duration: number
-  progress: number
 }
 
 const m3u8Processor = createM3u8Processor({ filterAds: true })
@@ -99,8 +96,6 @@ const stripHtmlTags = (value: string) => {
     .trim()
 }
 
-const buildDetailRequestKey = (sourceCode: string, vodId: string) => `${sourceCode}::${vodId}`
-
 const isTouchDevice = () =>
   window.matchMedia('(hover: none) and (pointer: coarse)').matches || navigator.maxTouchPoints > 0
 
@@ -133,23 +128,10 @@ export default function UnifiedPlayer() {
 
   const viewingHistoryRef = useRef(viewingHistory)
   const playbackRef = useRef(playback)
-  const detailRef = useRef<DetailResult | null>(null)
   const pendingSeekRef = useRef<number | null>(null)
-  const detailRequestSeqRef = useRef(0)
-  const loadedDetailKeyRef = useRef('')
-  const noticeTimersRef = useRef<Map<string, number>>(new Map())
-  const noticeAnimationFramesRef = useRef<Map<string, number>>(new Map())
-  const gestureVolumeTimerRef = useRef<number | null>(null)
   const playerRef = useRef<Artplayer | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const [detail, setDetail] = useState<DetailResult | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isDetailRefreshing, setIsDetailRefreshing] = useState(false)
-  const [transientNotices, setTransientNotices] = useState<PlayerTransientNotice[]>([])
-  const [gestureVolumeLevel, setGestureVolumeLevel] = useState<number | null>(null)
-  const [gestureSeekPreviewTime, setGestureSeekPreviewTime] = useState<number | null>(null)
   const [activeArt, setActiveArt] = useState<Artplayer | null>(null)
 
   useEffect(() => {
@@ -157,52 +139,12 @@ export default function UnifiedPlayer() {
     playbackRef.current = playback
   }, [playback, viewingHistory])
 
-  useEffect(() => {
-    detailRef.current = detail
-  }, [detail])
-
-  const showPlayerNotice = useCallback((message: string, duration = 2200) => {
-    const noticeId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
-    setTransientNotices(prev => [...prev, { id: noticeId, message, duration, progress: 100 }])
-
-    const firstFrame = window.requestAnimationFrame(() => {
-      const secondFrame = window.requestAnimationFrame(() => {
-        setTransientNotices(prev =>
-          prev.map(notice => (notice.id === noticeId ? { ...notice, progress: 0 } : notice)),
-        )
-        noticeAnimationFramesRef.current.delete(noticeId)
-      })
-      noticeAnimationFramesRef.current.set(noticeId, secondFrame)
-    })
-    noticeAnimationFramesRef.current.set(noticeId, firstFrame)
-
-    const timerId = window.setTimeout(() => {
-      setTransientNotices(prev => prev.filter(notice => notice.id !== noticeId))
-      noticeTimersRef.current.delete(noticeId)
-      const frameId = noticeAnimationFramesRef.current.get(noticeId)
-      if (frameId) {
-        window.cancelAnimationFrame(frameId)
-        noticeAnimationFramesRef.current.delete(noticeId)
-      }
-    }, duration)
-    noticeTimersRef.current.set(noticeId, timerId)
-  }, [])
-
-  useEffect(() => {
-    const noticeTimers = noticeTimersRef.current
-    const noticeAnimationFrames = noticeAnimationFramesRef.current
-
-    return () => {
-      noticeTimers.forEach(timerId => window.clearTimeout(timerId))
-      noticeTimers.clear()
-      noticeAnimationFrames.forEach(frameId => window.cancelAnimationFrame(frameId))
-      noticeAnimationFrames.clear()
-      if (gestureVolumeTimerRef.current) {
-        window.clearTimeout(gestureVolumeTimerRef.current)
-      }
-    }
-  }, [])
+  const { transientNotices, showPlayerNotice } = usePlayerNotices()
+  const { gestureVolumeLevel, gestureSeekPreviewTime } = usePlayerGestureOverlays({
+    art: activeArt,
+    enabled: playback.isMobileGestureEnabled,
+    longPressPlaybackRate: playback.longPressPlaybackRate,
+  })
 
   const playerOverlayContainer = activeArt?.template?.$player ?? null
   const seekPreviewOverlay =
@@ -233,81 +175,23 @@ export default function UnifiedPlayer() {
     [sourceCode, videoAPIs],
   )
 
+  const {
+    detail,
+    loading,
+    error,
+    isDetailRefreshing,
+  } = usePlayerDetail({
+    cmsClient,
+    routeError,
+    sourceCode,
+    vodId,
+    sourceConfig,
+  })
+
   const buildCurrentPlayPath = useCallback(
     (episodeIndex: number) => buildCmsPlayPath(sourceCode, vodId, episodeIndex),
     [sourceCode, vodId],
   )
-
-  useEffect(() => {
-    const requestSeq = detailRequestSeqRef.current + 1
-    detailRequestSeqRef.current = requestSeq
-    let disposed = false
-    const canCommit = () => !disposed && detailRequestSeqRef.current === requestSeq
-
-    const fetchVideoDetail = async () => {
-      if (routeError) {
-        if (!canCommit()) return
-        setDetail(null)
-        setLoading(false)
-        setIsDetailRefreshing(false)
-        setError(routeError)
-        return
-      }
-
-      if (!sourceCode || !vodId) {
-        if (!canCommit()) return
-        setDetail(null)
-        setLoading(false)
-        setIsDetailRefreshing(false)
-        setError('缺少必要的播放参数')
-        return
-      }
-
-      const detailRequestKey = buildDetailRequestKey(sourceCode, vodId)
-      const hasLoadedCurrentDetail = Boolean(
-        detailRef.current && loadedDetailKeyRef.current === detailRequestKey,
-      )
-      if (hasLoadedCurrentDetail) return
-
-      if (!canCommit()) return
-      if (detailRef.current) setIsDetailRefreshing(true)
-      else setLoading(true)
-      setError(null)
-
-      try {
-        if (!sourceConfig) {
-          throw new Error('未找到对应视频源配置，请检查源设置')
-        }
-
-        const response = await cmsClient.getDetail(vodId, sourceConfig)
-        if (!canCommit()) return
-        if (response.success && response.episodes && response.episodes.length > 0) {
-          loadedDetailKeyRef.current = detailRequestKey
-          setDetail(response)
-          setError(null)
-          return
-        }
-
-        throw new Error(response.error || '获取视频详情失败')
-      } catch (fetchError) {
-        if (!canCommit()) return
-        console.error('获取视频详情失败:', fetchError)
-        setDetail(null)
-        setError(fetchError instanceof Error ? fetchError.message : '获取视频详情失败')
-      } finally {
-        if (canCommit()) {
-          setLoading(false)
-          setIsDetailRefreshing(false)
-        }
-      }
-    }
-
-    void fetchVideoDetail()
-
-    return () => {
-      disposed = true
-    }
-  }, [cmsClient, routeError, sourceCode, sourceConfig, vodId])
 
   const episodes = useMemo(() => {
     if (!detail) return []
@@ -351,49 +235,6 @@ export default function UnifiedPlayer() {
     })
     return normalized
   }, [playback.isViewingHistoryVisible, sourceCode, viewingHistory, vodId])
-
-  const handleVolumeGestureChange = useCallback((volume: number) => {
-    if (gestureVolumeTimerRef.current) {
-      window.clearTimeout(gestureVolumeTimerRef.current)
-      gestureVolumeTimerRef.current = null
-    }
-    setGestureVolumeLevel(volume)
-  }, [])
-
-  const handleVolumeGestureEnd = useCallback(() => {
-    if (gestureVolumeTimerRef.current) {
-      window.clearTimeout(gestureVolumeTimerRef.current)
-    }
-    gestureVolumeTimerRef.current = window.setTimeout(() => {
-      setGestureVolumeLevel(null)
-      gestureVolumeTimerRef.current = null
-    }, 360)
-  }, [])
-
-  const handleSeekGesturePreviewChange = useCallback((previewTime: number) => {
-    setGestureSeekPreviewTime(previewTime)
-  }, [])
-
-  const handleSeekGesturePreviewEnd = useCallback(() => {
-    setGestureSeekPreviewTime(null)
-  }, [])
-
-  const mobileGestureConfig = useMemo(
-    () => ({
-      longPressPlaybackRate: Math.max(1, Math.min(5, playback.longPressPlaybackRate)),
-    }),
-    [playback.longPressPlaybackRate],
-  )
-
-  useMobilePlayerGestures({
-    art: activeArt,
-    enabled: playback.isMobileGestureEnabled,
-    config: mobileGestureConfig,
-    onVolumeGestureChange: handleVolumeGestureChange,
-    onVolumeGestureEnd: handleVolumeGestureEnd,
-    onSeekGesturePreviewChange: handleSeekGesturePreviewChange,
-    onSeekGesturePreviewEnd: handleSeekGesturePreviewEnd,
-  })
 
   useEffect(() => {
     if (!detail?.episodes || !detail.episodes[selectedEpisode] || !containerRef.current) return

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { VideoSource } from '@ouonnki/cms-core'
-import { getSourcesToFetch } from './directSearch.utils'
+import type { VideoItem, VideoSource } from '@ouonnki/cms-core'
+import { appendUniqueVideoItems, getSourcesToFetch } from './directSearch.utils'
 
 function createSource(id: string): VideoSource {
   return {
@@ -34,5 +34,44 @@ describe('getSourcesToFetch', () => {
 
     expect(result.map(item => item.id)).toEqual(['b', 'c'])
     expect(result).toHaveLength(2)
+  })
+})
+
+function createVideo(sourceCode: string, vodId: string): VideoItem {
+  return {
+    vod_id: vodId,
+    vod_name: `${sourceCode}-${vodId}`,
+    source_code: sourceCode,
+  }
+}
+
+describe('appendUniqueVideoItems', () => {
+  it('同源同 vod_id 的结果只追加一次', () => {
+    const seenKeys = new Set<string>()
+    const first = appendUniqueVideoItems([], [createVideo('source-a', '1')], seenKeys)
+    const second = appendUniqueVideoItems(
+      first,
+      [createVideo('source-a', '1'), createVideo('source-a', '2')],
+      seenKeys,
+    )
+
+    expect(second.map(item => `${item.source_code}:${item.vod_id}`)).toEqual([
+      'source-a:1',
+      'source-a:2',
+    ])
+  })
+
+  it('不同源相同 vod_id 仍保留为独立结果', () => {
+    const seenKeys = new Set<string>()
+    const result = appendUniqueVideoItems(
+      [],
+      [createVideo('source-a', '1'), createVideo('source-b', '1')],
+      seenKeys,
+    )
+
+    expect(result.map(item => `${item.source_code}:${item.vod_id}`)).toEqual([
+      'source-a:1',
+      'source-b:1',
+    ])
   })
 })

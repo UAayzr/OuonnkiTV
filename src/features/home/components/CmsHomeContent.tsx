@@ -6,24 +6,55 @@ import { CmsMediaCarousel } from './CmsMediaCarousel'
 import { NavLink } from 'react-router'
 import { Settings, Plus } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const HOME_SOURCE_LIMIT = 6
+const EAGER_HOME_SOURCE_COUNT = 2
 
 /**
  * 单个视频源推荐列表
  * 独立组件以隔离每个源的 hook 调用
  */
-function SourceCarousel({ source }: { source: VideoSource }) {
+function SourceCarousel({ source, eager = false }: { source: VideoSource; eager?: boolean }) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [shouldLoad, setShouldLoad] = useState(eager)
   const sourceWithoutRetry = useMemo(() => ({ ...source, retry: 0 }), [source])
-  const { items, loading } = useCmsVideoList(sourceWithoutRetry)
+
+  useEffect(() => {
+    if (shouldLoad || eager) {
+      setShouldLoad(true)
+      return
+    }
+
+    const element = containerRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (!entries.some(entry => entry.isIntersecting)) return
+        setShouldLoad(true)
+        observer.disconnect()
+      },
+      {
+        rootMargin: '480px 0px',
+        threshold: 0.01,
+      },
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [eager, shouldLoad])
+
+  const { items, loading } = useCmsVideoList(shouldLoad ? sourceWithoutRetry : null)
 
   return (
-    <CmsMediaCarousel
-      title={source.name}
-      items={items}
-      loading={loading}
-    />
+    <div ref={containerRef} className="min-h-[120px]">
+      <CmsMediaCarousel
+        title={source.name}
+        items={items}
+        loading={shouldLoad ? loading : true}
+      />
+    </div>
   )
 }
 
@@ -68,8 +99,8 @@ export function CmsHomeContent() {
       <ContinueWatching />
       {/* 各视频源推荐列表 */}
       {videoAPIs.length > 0 ? (
-        videoAPIs.map(source => (
-          <SourceCarousel key={source.id} source={source} />
+        videoAPIs.map((source, index) => (
+          <SourceCarousel key={source.id} source={source} eager={index < EAGER_HOME_SOURCE_COUNT} />
         ))
       ) : (
         <EmptySourceState />

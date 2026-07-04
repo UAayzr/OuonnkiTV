@@ -1,2 +1,5 @@
 export * from './useEpisodePagination'
 export * from './useMobilePlayerGestures'
+export * from './usePlayerDetail'
+export * from './usePlayerGestureOverlays'
+export * from './usePlayerNotices'
