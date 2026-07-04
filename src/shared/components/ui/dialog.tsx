@@ -28,7 +28,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50',
+        'fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] transition-opacity duration-240 ease-[var(--motion-ease-standard)] data-[state=closed]:opacity-0 data-[state=open]:opacity-100 motion-reduce:transition-none',
         className,
       )}
       {...props}
@@ -54,15 +54,13 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'bg-background fixed z-50 grid w-full gap-4 border p-6 shadow-lg duration-400',
+          'bg-background fixed z-50 grid w-full gap-4 border p-6 shadow-lg transition-[opacity,transform] duration-300 ease-[var(--motion-ease-soft)] motion-reduce:transition-none',
           // Mobile (Drawer)
           'top-auto right-0 bottom-0 left-0 translate-x-0 translate-y-0 rounded-t-xl rounded-b-none border-b-0',
-          'data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
-          'data-[state=open]:animate-in data-[state=closed]:animate-out',
-          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          'data-[state=closed]:translate-y-3 data-[state=closed]:opacity-0 data-[state=open]:translate-y-0 data-[state=open]:opacity-100',
           // Desktop (Dialog)
           'sm:top-[50%] sm:left-[50%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:rounded-b-lg sm:border-b',
-          'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
+          'sm:data-[state=closed]:scale-[0.985] sm:data-[state=open]:scale-100',
           className,
         )}
         {...props}

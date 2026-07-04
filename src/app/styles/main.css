@@ -331,6 +331,13 @@ html.dark.theme-lavender {
 /* 主题过渡动画持续时间 */
 :root {
   --theme-transition-duration: 300ms;
+  --motion-duration-quick: 140ms;
+  --motion-duration-fast: 180ms;
+  --motion-duration-base: 240ms;
+  --motion-duration-slow: 360ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-press: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* 仅主题切换期间启用颜色过渡，避免普通渲染触发全局动画 */
@@ -360,7 +367,7 @@ html.dark.theme-lavender {
 /* 新视图在上层，从点击位置向外扩散 */
 [data-theme-transition='expand']::view-transition-new(root) {
   z-index: 999;
-  animation: theme-expand 400ms ease-out;
+  animation: theme-expand 420ms var(--motion-ease-soft);
 }
 [data-theme-transition='expand']::view-transition-old(root) {
   z-index: 1;
@@ -370,7 +377,7 @@ html.dark.theme-lavender {
 /* 旧视图在上层，向点击位置收缩消失 */
 [data-theme-transition='contract']::view-transition-old(root) {
   z-index: 999;
-  animation: theme-contract 400ms ease-in forwards;
+  animation: theme-contract 360ms var(--motion-ease-standard) forwards;
 }
 [data-theme-transition='contract']::view-transition-new(root) {
   z-index: 1;
@@ -403,31 +410,29 @@ html.dark.theme-lavender {
 @keyframes route-fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
-    filter: blur(2px);
+    transform: translateY(5px) scale(0.997);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes nav-search-in {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: translateY(-2px) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes active-bg-in {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: scale(0.985);
   }
   to {
     opacity: 1;
@@ -449,7 +454,7 @@ html.dark.theme-lavender {
 @keyframes settings-guide-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px) scale(0.998);
   }
   to {
     opacity: 1;
@@ -471,7 +476,7 @@ html.dark.theme-lavender {
 @keyframes search-brand-in {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-8px) scale(0.99);
   }
   to {
     opacity: 1;
@@ -482,7 +487,7 @@ html.dark.theme-lavender {
 @keyframes management-panel-in {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.98);
+    transform: translateY(10px) scale(0.985);
     max-width: 3rem;
   }
   to {
@@ -506,7 +511,7 @@ html.dark.theme-lavender {
 @keyframes management-collapsed-in {
   from {
     opacity: 0;
-    transform: translateX(-14px) scale(0.9);
+    transform: translateX(-10px) scale(0.94);
   }
   to {
     opacity: 1;
@@ -517,7 +522,7 @@ html.dark.theme-lavender {
 @keyframes slide-x-in {
   from {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateX(14px);
   }
   to {
     opacity: 1;
@@ -560,12 +565,18 @@ html.dark.theme-lavender {
   from {
     opacity: 0;
     transform: translateY(8px);
-    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
   }
 }
 
