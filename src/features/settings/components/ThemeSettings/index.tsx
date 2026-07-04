@@ -51,14 +51,14 @@ export default function ThemeSettings() {
                 }}
                 onClick={() => handleModeChange(option.value)}
                 className={cn(
-                  'relative z-10 flex min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-xs font-medium transition-colors sm:gap-1.5 sm:px-3 sm:text-sm',
+                  'relative z-10 flex min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-xs font-medium transition-[color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px active:translate-y-0 active:scale-[0.982] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 sm:gap-1.5 sm:px-3 sm:text-sm',
                   isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary/80',
                 )}
               >
                 <Icon className="size-3.5 shrink-0" />
                 <span className="whitespace-nowrap leading-none">{option.label}</span>
                 {isActive ? (
-                  <span className="bg-background absolute inset-0 -z-10 animate-[active-bg-in_180ms_ease-out] rounded-full shadow-sm motion-reduce:animate-none" />
+                  <span className="bg-background absolute inset-0 -z-10 animate-[active-bg-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] rounded-full shadow-sm motion-reduce:animate-none" />
                 ) : null}
               </button>
             )

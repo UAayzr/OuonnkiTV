@@ -34,7 +34,7 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] transition-opacity duration-240 ease-[var(--motion-ease-standard)] data-[state=closed]:opacity-0 data-[state=open]:opacity-100 motion-reduce:transition-none",
+        "fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] data-[state=closed]:opacity-0 data-[state=open]:opacity-100 motion-reduce:transition-none",
         className
       )}
       {...props}
@@ -58,7 +58,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "bg-background group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg transition-[opacity,transform] duration-240 ease-[var(--motion-ease-soft)] data-[state=closed]:scale-[0.985] data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100 data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg motion-reduce:transition-none",
+          "bg-background group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] data-[state=closed]:scale-[0.99] data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100 data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg motion-reduce:transition-none",
           className
         )}
         {...props}

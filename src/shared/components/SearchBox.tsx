@@ -28,6 +28,11 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
   const hasContent = inputContent.trim().length > 0
   const hasHistory = searchHistory.length > 0
   const shouldShowDropdown = isDropdownOpen && !hasContent && hasHistory
+  const searchButtonContentClass =
+    'inline-flex items-center justify-center transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] motion-reduce:transition-none'
+  const searchButtonStateClass = hasContent
+    ? 'opacity-100 translate-x-0 scale-100'
+    : 'opacity-45 translate-x-0 scale-[0.96]'
 
   const handleInteractiveItemKeyDown = (
     event: React.KeyboardEvent<HTMLDivElement>,
@@ -155,7 +160,7 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
     <>
       {/* 移动端搜索模式下的返回按钮 */}
       <div
-        className={`absolute left-2 transition-all duration-300 ease-out sm:hidden ${
+        className={`absolute left-2 transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] motion-reduce:transition-none sm:hidden ${
           isMobileSearchOpen
             ? 'translate-x-0 opacity-100'
             : 'pointer-events-none -translate-x-4 opacity-0'
@@ -179,7 +184,7 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
               <Input
                 ref={desktopInputRef}
                 placeholder="搜索"
-                className="h-9 rounded-full rounded-r-none pr-8 pl-10 overflow-ellipsis focus-visible:ring-1"
+                className="bg-background/85 h-9 rounded-full rounded-r-none border-r-0 pr-10 pl-10 overflow-ellipsis shadow-sm transition-[border-color,box-shadow,background-color] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] focus-visible:ring-1"
                 value={inputContent}
                 onChange={e => handleInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -190,20 +195,22 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-[88px] -translate-y-1/2 transition-colors"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-[84px] z-10 -translate-y-1/2 rounded-full p-1 transition-[color,background-color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-[calc(50%+1px)] hover:bg-muted active:-translate-y-1/2 active:scale-[0.94] motion-reduce:transition-none"
                 >
                   <X size={16} />
                 </button>
               )}
               <Button
                 disabled={inputContent.length === 0}
-                className="dark:bg-accent dark:hover:bg-accent h-9 w-20 rounded-full rounded-l-none bg-gray-200 hover:bg-gray-300"
+                className="h-9 w-20 rounded-full rounded-l-none border-l-0 bg-muted/90 text-primary shadow-sm shadow-black/5 transition-[background-color,box-shadow,transform,color] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:bg-muted hover:shadow-md hover:shadow-black/8 disabled:opacity-100 disabled:hover:translate-y-0 dark:bg-accent/80 dark:hover:bg-accent"
                 onClick={() => {
                   searchMovie(inputContent)
                   setIsDropdownOpen(false)
                 }}
               >
-                <Search className="text-primary" size={20} />
+                <span className={`${searchButtonContentClass} ${searchButtonStateClass}`}>
+                  <Search className="text-primary" size={20} />
+                </span>
               </Button>
             </div>
           </PopoverAnchor>
@@ -221,13 +228,13 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
         <Popover open={shouldShowDropdown && isMobileSearchOpen}>
           <PopoverAnchor asChild>
             <div
-              className={`absolute right-4 left-12 transition-all duration-300 ease-out sm:hidden ${
+              className={`absolute right-4 left-12 transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] motion-reduce:transition-none sm:hidden ${
                 isMobileSearchOpen
                   ? 'scale-100 opacity-100'
                   : 'pointer-events-none scale-95 opacity-0'
               }`}
             >
-              <div className="relative flex w-full">
+              <div className="relative flex w-full rounded-full shadow-sm shadow-black/5">
                 <Search
                   className="text-muted-foreground absolute top-1/2 left-3 z-10 -translate-y-1/2"
                   size={18}
@@ -235,7 +242,7 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
                 <Input
                   ref={mobileInputRef}
                   placeholder="搜索"
-                  className="h-9 rounded-full rounded-r-none pr-8 pl-10 overflow-ellipsis focus-visible:ring-1"
+                  className="bg-background/90 h-9 rounded-full rounded-r-none border-r-0 pr-9 pl-10 overflow-ellipsis transition-[border-color,box-shadow,background-color] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] focus-visible:ring-1"
                   value={inputContent}
                   onChange={e => handleInputChange(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -246,24 +253,22 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
                   <button
                     type="button"
                     onClick={handleClear}
-                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-[56px] z-10 -translate-y-1/2 transition-colors"
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-[52px] z-10 -translate-y-1/2 rounded-full p-1 transition-[color,background-color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-[calc(50%+1px)] hover:bg-muted active:-translate-y-1/2 active:scale-[0.94] motion-reduce:transition-none"
                   >
                     <X size={16} />
                   </button>
                 )}
                 <Button
                   disabled={inputContent.length === 0}
-                  className="dark:bg-accent dark:hover:bg-accent h-9 w-12 rounded-full rounded-l-none bg-gray-200 hover:bg-gray-300"
+                  className="h-9 w-12 rounded-full rounded-l-none border-l-0 bg-muted/90 text-primary shadow-sm shadow-black/5 transition-[background-color,box-shadow,transform,color] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:bg-muted hover:shadow-md hover:shadow-black/8 disabled:opacity-100 disabled:hover:translate-y-0 dark:bg-accent/80 dark:hover:bg-accent"
                   onClick={() => {
                     searchMovie(inputContent)
                     setIsDropdownOpen(false)
                   }}
                 >
-                  {isMobileSearchOpen && (
-                    <span className="animate-[active-bg-in_160ms_ease-out] motion-reduce:animate-none">
-                      <Search className="text-primary" size={18} />
-                    </span>
-                  )}
+                  <span className={`${searchButtonContentClass} ${searchButtonStateClass}`}>
+                    <Search className="text-primary" size={18} />
+                  </span>
                 </Button>
               </div>
             </div>
@@ -287,7 +292,7 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
         onClick={openMobileSearch}
       >
         {!isMobileSearchOpen && (
-          <span className="animate-[active-bg-in_160ms_ease-out] motion-reduce:animate-none">
+          <span className="animate-[active-bg-in_var(--motion-duration-tap)_var(--motion-ease-rebound)] rounded-full motion-reduce:animate-none">
             <Search className="text-primary" size={20} />
           </span>
         )}

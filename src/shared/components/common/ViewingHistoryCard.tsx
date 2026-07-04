@@ -76,12 +76,12 @@ export function ViewingHistoryCard({
       className={cn(
         selectionMode
           ? 'relative cursor-pointer overflow-hidden rounded-lg'
-          : 'group relative cursor-pointer overflow-hidden rounded-lg bg-muted shadow-sm transition-[box-shadow,transform] duration-300 ease-[var(--motion-ease-soft)] hover:shadow-lg hover:shadow-black/10 active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100',
+          : 'group relative cursor-pointer overflow-hidden rounded-lg bg-muted shadow-sm transition-[box-shadow,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px hover:shadow-lg hover:shadow-black/10 active:translate-y-0 active:scale-[0.988] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100',
         selected && 'ring-primary ring-offset-background ring-2 ring-offset-2',
       )}
     >
       {selectionMode && (
-        <div className="absolute top-2 right-2 z-20 animate-[auth-rise-in_180ms_ease-out] motion-reduce:animate-none">
+        <div className="absolute top-2 right-2 z-20 animate-[auth-rise-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] motion-reduce:animate-none">
           <Checkbox
             checked={selected}
             onCheckedChange={handleSelect}
@@ -93,33 +93,33 @@ export function ViewingHistoryCard({
 
       <AspectRatio ratio={1.778}>
         <img
-          className="h-full w-full object-cover transition-transform duration-500 ease-[var(--motion-ease-soft)] group-hover:scale-[1.045] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+          className="h-full w-full object-cover transition-transform duration-[300ms] ease-[var(--motion-ease-soft-rebound)] group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           src={item.imageUrl}
           alt={item.title}
         />
-        <div className="pointer-events-none absolute top-2 left-2 flex max-w-[82%] items-center gap-1 transition-[opacity,transform] duration-300 ease-[var(--motion-ease-standard)] group-hover:-translate-y-1 group-hover:opacity-0">
+        <div className="pointer-events-none absolute top-2 left-2 flex max-w-[82%] items-center gap-1 transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:-translate-y-1 group-hover:opacity-0">
           <span className="rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white">
             CMS
           </span>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6 transition-[opacity,transform] duration-300 ease-[var(--motion-ease-standard)] group-hover:translate-y-1 group-hover:opacity-0">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6 transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:translate-y-1 group-hover:opacity-0">
           <span className="line-clamp-1 text-sm font-medium text-white">{item.title}</span>
         </div>
       </AspectRatio>
 
       <Progress
-        className="h-1 transition-opacity duration-300 ease-[var(--motion-ease-standard)] group-hover:opacity-0 [&>*]:bg-red-600 dark:[&>*]:bg-red-800"
+        className="h-1 transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] group-hover:opacity-0 [&>*]:bg-red-600 dark:[&>*]:bg-red-800"
         value={progressValue}
       />
 
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/32 opacity-0 transition-opacity duration-300 ease-[var(--motion-ease-standard)] group-hover:opacity-100">
-        <div className="flex size-12 translate-y-2 scale-95 items-center justify-center rounded-full bg-white/92 text-black shadow-xl backdrop-blur-sm transition-[opacity,transform] duration-300 ease-[var(--motion-ease-soft)] group-hover:translate-y-0 group-hover:scale-100 motion-reduce:transition-none">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/32 opacity-0 transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] group-hover:opacity-100">
+        <div className="flex size-12 translate-y-1.5 scale-[0.96] items-center justify-center rounded-full bg-white/92 text-black shadow-xl backdrop-blur-sm transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-rebound)] group-hover:translate-y-0 group-hover:scale-100 motion-reduce:transition-none">
           <Play className="size-6 fill-current" />
         </div>
       </div>
 
       {!selectionMode ? (
-        <div className="pointer-events-none absolute top-2 right-2 flex max-w-[82%] translate-y-1 items-center gap-1 opacity-0 transition-[opacity,transform] duration-300 ease-[var(--motion-ease-soft)] group-hover:translate-y-0 group-hover:opacity-100">
+        <div className="pointer-events-none absolute top-2 right-2 flex max-w-[82%] translate-y-1 items-center gap-1 opacity-0 transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:translate-y-0 group-hover:opacity-100">
           <span className="max-w-[56%] truncate rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white">
             {getSourceLabel(item)}
           </span>
@@ -130,7 +130,7 @@ export function ViewingHistoryCard({
       ) : null}
 
       {!selectionMode ? (
-        <div className="pointer-events-none absolute bottom-2 left-2 flex translate-y-1 items-center gap-1 rounded bg-black/65 px-2 py-1 text-[11px] text-white opacity-0 transition-[opacity,transform] duration-300 ease-[var(--motion-ease-soft)] group-hover:translate-y-0 group-hover:opacity-100">
+        <div className="pointer-events-none absolute bottom-2 left-2 flex translate-y-1 items-center gap-1 rounded bg-black/65 px-2 py-1 text-[11px] text-white opacity-0 transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:translate-y-0 group-hover:opacity-100">
           <span className="font-semibold">已观看 {progressPercentLabel}</span>
           <span className="text-white/80">{progressDetailLabel}</span>
         </div>
@@ -148,7 +148,7 @@ export function ViewingHistoryCard({
       )}
     >
       {selectionMode && (
-        <div className="absolute top-2 right-2 z-20 animate-[auth-rise-in_180ms_ease-out] motion-reduce:animate-none">
+        <div className="absolute top-2 right-2 z-20 animate-[auth-rise-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] motion-reduce:animate-none">
           <Checkbox
             checked={selected}
             onCheckedChange={handleSelect}

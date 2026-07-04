@@ -2,7 +2,7 @@ import { Navbar, NavbarBrand, NavbarContent } from '@/shared/components/ui/navba
 import { OkiLogo } from '@/shared/components/icons'
 import { SidebarTrigger } from '@/shared/components/ui/sidebar'
 import { NavLink, useLocation } from 'react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Moon, Sun, Laptop } from 'lucide-react'
 
 import { Button } from '@/shared/components/ui/button'
@@ -22,13 +22,19 @@ export default function Navigation({ hidden = false, enableScrollAnimation = fal
 
   // 在搜索页面隐藏导航栏搜索框
   const isSearchPage = location.pathname === '/search'
+  const shouldRenderSearchBox = !isSearchPage
+  const isSearchChromeHidden = shouldRenderSearchBox && isMobileSearchOpen
+
+  useEffect(() => {
+    setIsMobileSearchOpen(false)
+  }, [location.pathname])
 
   return (
     <div
       className={cn(
         'sticky top-0 z-50 w-full overflow-hidden',
         enableScrollAnimation
-          ? 'transition-[height] duration-220 ease-out motion-reduce:transition-none'
+          ? 'transition-[height] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] motion-reduce:transition-none'
           : 'transition-none',
       )}
       style={{ height: hidden ? '0rem' : '4rem' }}
@@ -37,25 +43,25 @@ export default function Navigation({ hidden = false, enableScrollAnimation = fal
         className={cn(
           'flex w-full justify-center',
           enableScrollAnimation
-            ? 'transform-gpu will-change-[transform,opacity] transition-[opacity,transform] duration-220 ease-out motion-reduce:transition-none'
+            ? 'transform-gpu will-change-[transform,opacity] transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] motion-reduce:transition-none'
             : 'transition-none',
           hidden ? 'pointer-events-none -translate-y-2 opacity-0' : 'translate-y-0 opacity-100',
         )}
       >
         <Navbar
-          className={cn(
-            enableScrollAnimation && 'transition-[backdrop-filter,box-shadow] duration-200',
-            enableScrollAnimation && hidden && 'backdrop-blur-none shadow-none',
-          )}
+            className={cn(
+              enableScrollAnimation && 'transition-[backdrop-filter,box-shadow] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-standard)]',
+              enableScrollAnimation && hidden && 'backdrop-blur-none shadow-none',
+            )}
         >
           {/* Logo 和侧边栏触发器 - 移动端搜索模式下隐藏 */}
           <NavbarBrand
             className={cn(
               '!flex-none',
               enableScrollAnimation
-                ? 'transition-[opacity,transform] duration-220 ease-out'
+                ? 'transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)]'
                 : 'transition-none',
-              isMobileSearchOpen
+              isSearchChromeHidden
                 ? 'pointer-events-none -translate-x-4 opacity-0 sm:pointer-events-auto sm:translate-x-0 sm:opacity-100'
                 : '',
             )}
@@ -73,8 +79,8 @@ export default function Navigation({ hidden = false, enableScrollAnimation = fal
             <div className="flex-1" />
 
             {/* 搜索框组件 - 搜索页面时隐藏 */}
-            {!isSearchPage && (
-              <div className="flex flex-auto animate-[nav-search-in_180ms_ease-out] items-center motion-reduce:animate-none">
+            {shouldRenderSearchBox && (
+              <div className="flex flex-auto animate-[nav-search-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] items-center motion-reduce:animate-none">
                 <SearchBox onMobileSearchChange={setIsMobileSearchOpen} />
               </div>
             )}
@@ -83,9 +89,9 @@ export default function Navigation({ hidden = false, enableScrollAnimation = fal
               className={cn(
                 'flex flex-1 justify-end gap-2 sm:gap-0',
                 enableScrollAnimation
-                  ? 'transition-[opacity,transform] duration-220 ease-out'
+                  ? 'transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)]'
                   : 'transition-none',
-                isMobileSearchOpen
+                isSearchChromeHidden
                   ? 'pointer-events-none translate-x-4 opacity-0 sm:pointer-events-auto sm:translate-x-0 sm:opacity-100'
                   : '',
               )}

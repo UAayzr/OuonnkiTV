@@ -57,13 +57,13 @@ export function MediaPosterCard({
   }
   return (
     <NavLink to={to} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-      <div className="group cursor-pointer transition-transform duration-200 ease-[var(--motion-ease-standard)] active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100">
+      <div className="group cursor-pointer transition-transform duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px active:translate-y-0 active:scale-[0.988] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100">
         {/* 海报卡片 */}
-        <div className="relative overflow-hidden rounded-lg bg-muted shadow-sm transition-[box-shadow,transform] duration-300 ease-[var(--motion-ease-soft)] group-hover:shadow-lg group-hover:shadow-black/10">
+        <div className="relative overflow-hidden rounded-lg bg-muted shadow-sm transition-[box-shadow,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] group-hover:shadow-lg group-hover:shadow-black/10">
           <AspectRatio ratio={aspectRatio}>
             {posterSrc ? (
               <img
-                className="h-full w-full bg-muted object-cover transition-transform duration-500 ease-[var(--motion-ease-soft)] group-hover:scale-[1.045] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                className="h-full w-full bg-muted object-cover transition-transform duration-[300ms] ease-[var(--motion-ease-soft-rebound)] group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                 src={posterSrc}
                 alt={title}
                 decoding="async"
@@ -77,19 +77,19 @@ export function MediaPosterCard({
             )}
             
             {/* 上下遮罩 - 增强文字可读性 */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/55 to-transparent transition-opacity duration-300 ease-[var(--motion-ease-standard)] group-hover:opacity-20" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/65 to-transparent transition-opacity duration-300 ease-[var(--motion-ease-standard)] group-hover:opacity-35" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/55 to-transparent transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] group-hover:opacity-20" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/65 to-transparent transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] group-hover:opacity-35" />
 
             {/* 信息徽标 */}
             {year && (
-              <div className="absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] items-center font-medium text-white/90 transition-[opacity,transform] duration-300 ease-[var(--motion-ease-standard)] group-hover:-translate-y-1 group-hover:opacity-0">
+              <div className="absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] items-center font-medium text-white/90 transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:-translate-y-1 group-hover:opacity-0">
                 {year}
               </div>
             )}
 
             {topRightLabel && (
               <div
-                className="absolute right-0 top-0 rounded-bl-md rounded-tr-lg px-2 py-0.5 text-[10px] font-medium shadow-sm transition-[opacity,transform] duration-300 ease-[var(--motion-ease-standard)] group-hover:-translate-y-1 group-hover:opacity-0"
+                className="absolute right-0 top-0 rounded-bl-md rounded-tr-lg px-2 py-0.5 text-[10px] font-medium shadow-sm transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:-translate-y-1 group-hover:opacity-0"
                 style={labelStyle}
               >
                 {topRightLabel}
@@ -97,15 +97,15 @@ export function MediaPosterCard({
             )}
 
             {rating !== undefined && rating > 0 && (
-              <div className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold text-yellow-400 transition-[opacity,transform] duration-300 ease-[var(--motion-ease-standard)] group-hover:translate-y-1 group-hover:opacity-0">
+              <div className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold text-yellow-400 transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:translate-y-1 group-hover:opacity-0">
                 <span>★</span>
                 <span>{rating.toFixed(1)}</span>
               </div>
             )}
           </AspectRatio>
           {/* Hover 全卡片遮罩 + 播放按钮 */}
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/32 opacity-0 transition-opacity duration-300 ease-[var(--motion-ease-standard)] group-hover:opacity-100">
-            <div className="flex size-12 translate-y-2 scale-95 items-center justify-center rounded-full bg-white/92 text-black shadow-xl backdrop-blur-sm transition-[opacity,transform] duration-300 ease-[var(--motion-ease-soft)] group-hover:translate-y-0 group-hover:scale-100 motion-reduce:transition-none">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/32 opacity-0 transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] group-hover:opacity-100">
+            <div className="flex size-12 translate-y-1.5 scale-[0.96] items-center justify-center rounded-full bg-white/92 text-black shadow-xl backdrop-blur-sm transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-rebound)] group-hover:translate-y-0 group-hover:scale-100 motion-reduce:transition-none">
               <Play className="size-6 fill-current" />
             </div>
           </div>

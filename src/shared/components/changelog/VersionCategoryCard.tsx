@@ -34,7 +34,7 @@ export function VersionCategoryCard({ category, items }: VersionCategoryCardProp
         {items.map((item, index) => (
           <li
             key={index}
-            className="flex animate-[changelog-item-in_220ms_ease-out_both] items-start gap-2 text-sm motion-reduce:animate-none"
+            className="flex animate-[changelog-item-in_var(--motion-duration-pop)_var(--motion-ease-rebound)_both] items-start gap-2 text-sm motion-reduce:animate-none"
             style={{ animationDelay: `${Math.min(index * 40, 240)}ms` }}
           >
             <span className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', config.dot)} />

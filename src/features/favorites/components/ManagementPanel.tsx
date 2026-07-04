@@ -60,17 +60,17 @@ export function ManagementPanel({
               transform: isOpen ? 'translateX(50%)' : 'translateX(0)',
               maxWidth: isOpen ? 'calc(100% - 3rem)' : undefined,
               transition:
-                'right 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1)',
+                'right var(--motion-duration-panel) var(--motion-ease-soft-rebound), transform var(--motion-duration-panel) var(--motion-ease-soft-rebound)',
             }
       }
     >
       {isOpen ? (
           <div
             key="expanded-panel"
-            className="bg-background/95 border-border flex h-12 animate-[management-panel-in_250ms_ease-out] items-center gap-1 overflow-hidden rounded-3xl border px-3 shadow-2xl backdrop-blur-md motion-reduce:animate-none"
+            className="bg-background/95 border-border flex h-12 animate-[management-panel-in_var(--motion-duration-panel)_var(--motion-ease-soft-rebound)] items-center gap-1 overflow-hidden rounded-3xl border px-3 shadow-2xl backdrop-blur-md motion-reduce:animate-none"
           >
             {/* 全选/取消 */}
-            <div className="animate-[management-item-in_220ms_40ms_ease-out_both] motion-reduce:animate-none">
+            <div className="animate-[management-item-in_var(--motion-duration-pop)_40ms_var(--motion-ease-rebound)_both] motion-reduce:animate-none">
               <Button
                 variant="ghost"
                 size="sm"
@@ -93,13 +93,13 @@ export function ManagementPanel({
 
             {/* 计数 */}
             <span
-              className="text-muted-foreground animate-[management-item-in_220ms_80ms_ease-out_both] shrink-0 text-sm tabular-nums motion-reduce:animate-none"
+              className="text-muted-foreground animate-[management-item-in_var(--motion-duration-pop)_80ms_var(--motion-ease-rebound)_both] shrink-0 text-sm tabular-nums motion-reduce:animate-none"
             >
               {selectedCount}/{totalCount}
             </span>
 
             {/* 清空 */}
-            <div className="animate-[management-item-in_220ms_120ms_ease-out_both] motion-reduce:animate-none">
+            <div className="animate-[management-item-in_var(--motion-duration-pop)_120ms_var(--motion-ease-rebound)_both] motion-reduce:animate-none">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -133,11 +133,11 @@ export function ManagementPanel({
 
             {/* 分隔线 */}
             <div
-              className="bg-border mx-1 h-4 w-px shrink-0 animate-[management-item-in_220ms_160ms_ease-out_both] motion-reduce:animate-none"
+              className="bg-border mx-1 h-4 w-px shrink-0 animate-[management-item-in_var(--motion-duration-pop)_160ms_var(--motion-ease-rebound)_both] motion-reduce:animate-none"
             />
 
             {/* 删除选中 */}
-            <div className="animate-[management-item-in_220ms_200ms_ease-out_both] motion-reduce:animate-none">
+            <div className="animate-[management-item-in_var(--motion-duration-pop)_200ms_var(--motion-ease-rebound)_both] motion-reduce:animate-none">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -170,7 +170,7 @@ export function ManagementPanel({
             </div>
 
             {/* 退出按钮 */}
-            <div className="animate-[management-item-in_220ms_240ms_ease-out_both] motion-reduce:animate-none">
+            <div className="animate-[management-item-in_var(--motion-duration-pop)_240ms_var(--motion-ease-rebound)_both] motion-reduce:animate-none">
               <Button
                 variant="ghost"
                 size="sm"
@@ -184,7 +184,7 @@ export function ManagementPanel({
         ) : (
           <div
             key="collapsed-button"
-            className="animate-[management-collapsed-in_180ms_ease-out] motion-reduce:animate-none"
+            className="animate-[management-collapsed-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] motion-reduce:animate-none"
           >
             <Button
               size="lg"

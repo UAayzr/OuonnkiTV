@@ -49,8 +49,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           { clipPath: `circle(150% at ${origin})` },
         ],
         {
-          duration: 600,
-          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          duration: 300,
+          easing: 'cubic-bezier(0.2, 1.08, 0.34, 1)',
           fill: 'forwards',
         },
       )
@@ -113,7 +113,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       >
         {/* 左侧品牌区 — 移动端顶部横栏，桌面端左侧半屏 */}
         <div
-          className="relative flex shrink-0 animate-[auth-fade-in_600ms_cubic-bezier(0.25,0.46,0.45,0.94)] flex-col items-center justify-center overflow-hidden bg-muted/40 px-8 py-12 motion-reduce:animate-none md:w-1/2 md:py-0"
+          className="relative flex shrink-0 animate-[auth-fade-in_var(--motion-duration-panel)_var(--motion-ease-standard)] flex-col items-center justify-center overflow-hidden bg-muted/40 px-8 py-12 motion-reduce:animate-none md:w-1/2 md:py-0"
         >
           {/* 装饰性模糊光晕 */}
           <div className="pointer-events-none absolute -top-20 -left-20 size-72 rounded-full bg-primary/10 blur-3xl" />
@@ -121,14 +121,14 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
           <div className="relative flex flex-col items-center gap-4">
             <div
-              className="flex animate-[auth-rise-in_500ms_100ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] flex-col items-center gap-3 motion-reduce:animate-none"
+              className="flex animate-[auth-rise-in_var(--motion-duration-panel)_80ms_var(--motion-ease-soft-rebound)_both] flex-col items-center gap-3 motion-reduce:animate-none"
             >
               <OkiLogo size={80} />
               <div className="text-xl font-bold tracking-widest">UAayZR TV</div>
             </div>
 
             <p
-              className="max-w-xs animate-[auth-fade-in_500ms_250ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] text-center text-sm text-muted-foreground motion-reduce:animate-none"
+              className="max-w-xs animate-[auth-fade-in_var(--motion-duration-panel)_140ms_var(--motion-ease-standard)_both] text-center text-sm text-muted-foreground motion-reduce:animate-none"
             >
               你的私人流媒体影院
             </p>
@@ -140,7 +140,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           <div className="w-full max-w-sm space-y-8">
             {/* 信息区域 */}
             <div
-              className="animate-[auth-rise-in_500ms_150ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] space-y-4 motion-reduce:animate-none"
+              className="animate-[auth-rise-in_var(--motion-duration-panel)_120ms_var(--motion-ease-soft-rebound)_both] space-y-4 motion-reduce:animate-none"
             >
               <div className="flex size-12 items-center justify-center rounded-xl bg-muted/70 ring-1 ring-border/60">
                 <Lock className="size-5 text-muted-foreground" />
@@ -155,7 +155,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
             {/* 表单区域 */}
             <div
-              className="animate-[auth-rise-in_500ms_250ms_cubic-bezier(0.25,0.46,0.45,0.94)_both] motion-reduce:animate-none"
+              className="animate-[auth-rise-in_var(--motion-duration-panel)_180ms_var(--motion-ease-soft-rebound)_both] motion-reduce:animate-none"
             >
               <div className="flex items-center gap-2">
                 <Input

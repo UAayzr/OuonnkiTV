@@ -79,14 +79,14 @@ export default function SideBar({
     <Sidebar
       className={cn(
         enableScrollAnimation
-          ? '[&_[data-slot=sidebar-gap]]:transition-[width] [&_[data-slot=sidebar-gap]]:duration-220 [&_[data-slot=sidebar-gap]]:ease-out'
+          ? '[&_[data-slot=sidebar-gap]]:transition-[width] [&_[data-slot=sidebar-gap]]:duration-[var(--motion-duration-panel)] [&_[data-slot=sidebar-gap]]:ease-[var(--motion-ease-soft-rebound)]'
           : '[&_[data-slot=sidebar-gap]]:transition-none',
         '[&_[data-slot=sidebar-container]]:translate-x-0 [&_[data-slot=sidebar-container]]:opacity-100 [&_[data-slot=sidebar-container]]:transform-gpu [&_[data-slot=sidebar-container]]:will-change-[transform,opacity,top]',
         enableScrollAnimation
-          ? '[&_[data-slot=sidebar-container]]:transition-[transform,opacity,top] [&_[data-slot=sidebar-container]]:duration-220 [&_[data-slot=sidebar-container]]:ease-out'
+          ? '[&_[data-slot=sidebar-container]]:transition-[transform,opacity,top] [&_[data-slot=sidebar-container]]:duration-[var(--motion-duration-panel)] [&_[data-slot=sidebar-container]]:ease-[var(--motion-ease-soft-rebound)]'
           : '[&_[data-slot=sidebar-container]]:transition-none',
         enableScrollAnimation
-          ? '[&_[data-slot=sidebar-inner]]:transition-opacity [&_[data-slot=sidebar-inner]]:duration-200'
+          ? '[&_[data-slot=sidebar-inner]]:transition-[opacity,transform,box-shadow] [&_[data-slot=sidebar-inner]]:duration-[var(--motion-duration-panel)] [&_[data-slot=sidebar-inner]]:ease-[var(--motion-ease-soft-rebound)]'
           : '[&_[data-slot=sidebar-inner]]:transition-none',
         hidden &&
           '[&_[data-slot=sidebar-gap]]:w-0 [&_[data-slot=sidebar-container]]:pointer-events-none [&_[data-slot=sidebar-container]]:-translate-x-full [&_[data-slot=sidebar-container]]:opacity-0 [&_[data-slot=sidebar-inner]]:opacity-0',
@@ -95,7 +95,7 @@ export default function SideBar({
       variant="floating"
       collapsible={collapsibleMode}
     >
-      <SidebarHeader className="sm:hidden">
+      <SidebarHeader className="animate-[sidebar-content-in_var(--motion-duration-panel)_var(--motion-ease-soft-rebound)_both] sm:hidden motion-reduce:animate-none">
         <NavLink to="/" className="flex items-center" onClick={handleNavLinkClick}>
           <div className="flex items-center gap-2">
             <OkiLogo />
@@ -103,13 +103,17 @@ export default function SideBar({
           </div>
         </NavLink>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="animate-[sidebar-content-in_var(--motion-duration-panel)_60ms_var(--motion-ease-soft-rebound)_both] motion-reduce:animate-none">
         <SidebarGroup>
           <SidebarGroupLabel>主菜单</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
-              {items.content.map(item => (
-                <SidebarMenuItem key={item.title}>
+              {items.content.map((item, index) => (
+                <SidebarMenuItem
+                  key={item.title}
+                  className="animate-[sidebar-item-in_var(--motion-duration-pop)_var(--sidebar-item-delay,0ms)_var(--motion-ease-soft-rebound)_both] motion-reduce:animate-none"
+                  style={{ '--sidebar-item-delay': `${80 + index * 28}ms` } as React.CSSProperties}
+                >
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
@@ -118,7 +122,7 @@ export default function SideBar({
                       data-mactive={location.pathname === item.url}
                     >
                       {location.pathname === item.url && (
-                        <div className="bg-sidebar-primary/15 absolute top-0 left-0 h-full w-full animate-[active-bg-in_180ms_ease-out] rounded-md motion-reduce:animate-none" />
+                        <div className="bg-sidebar-primary/15 absolute top-0 left-0 h-full w-full animate-[active-bg-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] rounded-md motion-reduce:animate-none" />
                       )}
                       <item.icon className="z-1" />
                       <span className="z-1">{item.title}</span>
@@ -132,8 +136,12 @@ export default function SideBar({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
-          {items.footer.map(item => (
-            <SidebarMenuItem key={item.title}>
+          {items.footer.map((item, index) => (
+            <SidebarMenuItem
+              key={item.title}
+              className="animate-[sidebar-item-in_var(--motion-duration-pop)_var(--sidebar-item-delay,0ms)_var(--motion-ease-soft-rebound)_both] motion-reduce:animate-none"
+              style={{ '--sidebar-item-delay': `${180 + index * 28}ms` } as React.CSSProperties}
+            >
               <SidebarMenuButton asChild>
                 <NavLink to={item.url} onClick={handleNavLinkClick}>
                   <item.icon />

@@ -80,7 +80,7 @@ export default function BackToTopButton({
       {scrollTarget && (
         <div
           className={cn(
-            'pointer-events-auto transform-gpu transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none',
+            'pointer-events-auto transform-gpu transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] motion-reduce:transition-none',
             visible ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-2 scale-95 opacity-0',
           )}
         >

@@ -64,7 +64,7 @@ export function ChangelogDialog({ isOpen, onClose, versions }: ChangelogDialogPr
               <div className="p-5">
                 <div
                   key={selectedVersion.version}
-                  className="animate-[slide-x-in_220ms_ease-out] motion-reduce:animate-none"
+                  className="animate-[slide-x-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] motion-reduce:animate-none"
                 >
                   <VersionDetail version={selectedVersion} />
                 </div>

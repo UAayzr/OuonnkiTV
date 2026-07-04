@@ -90,7 +90,7 @@ export function HistoryHeader({
 
           <div
             key={selectionMode ? 'editing-actions' : 'default-actions'}
-            className="absolute inset-y-0 right-0 flex animate-[history-actions-in_200ms_ease-out] items-center motion-reduce:animate-none"
+            className="absolute inset-y-0 right-0 flex animate-[history-actions-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] items-center motion-reduce:animate-none"
             style={{
               '--history-action-x': `${actionDirection > 0 ? 24 : -24}px`,
             } as React.CSSProperties}

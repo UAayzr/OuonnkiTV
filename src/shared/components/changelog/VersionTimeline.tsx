@@ -35,10 +35,10 @@ function DesktopTimeline({ versions, selectedVersion, onSelectVersion }: Version
               key={version.version}
               type="button"
               onClick={() => onSelectVersion(version)}
-              className="relative flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors"
+              className="relative flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-[color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px active:translate-y-0 active:scale-[0.982] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
             >
               {isSelected && (
-                <span className="bg-muted/55 absolute inset-0 animate-[active-bg-in_180ms_ease-out] rounded-lg motion-reduce:animate-none" />
+                <span className="bg-muted/55 absolute inset-0 animate-[active-bg-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] rounded-lg motion-reduce:animate-none" />
               )}
 
               <span
@@ -99,7 +99,7 @@ function MobileAccordion({ versions }: { versions: VersionUpdate[] }) {
               type="button"
               onClick={() => toggleExpand(version.version)}
               className={cn(
-                'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-colors',
+                'flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-[background-color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px active:translate-y-0 active:scale-[0.982] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100',
                 isExpanded ? 'bg-muted/55' : 'hover:bg-muted/35',
               )}
             >
@@ -112,14 +112,14 @@ function MobileAccordion({ versions }: { versions: VersionUpdate[] }) {
               </div>
               <ChevronDown
                 className={cn(
-                  'text-muted-foreground size-4 shrink-0 transition-transform duration-200',
+                  'text-muted-foreground size-4 shrink-0 transition-transform duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)]',
                   isExpanded && 'rotate-180',
                 )}
               />
             </button>
 
             {isExpanded && (
-              <div className="grid animate-[accordion-in_240ms_ease-out] overflow-hidden motion-reduce:animate-none">
+              <div className="grid animate-[accordion-in_var(--motion-duration-panel)_var(--motion-ease-soft-rebound)] overflow-hidden motion-reduce:animate-none">
                 <div className="min-h-0 px-1 pt-2 pb-1">
                   <VersionDetail version={version} />
                 </div>

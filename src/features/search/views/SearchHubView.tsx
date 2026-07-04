@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 import { X } from 'lucide-react'
 import { useDocumentTitle, useSearchHistory } from '@/shared/hooks'
@@ -17,19 +17,7 @@ import {
 export default function SearchHubView() {
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
-
-  const [isDirectCentered, setIsDirectCentered] = useState(false)
-
-  // 延迟应用居中样式，等待大家都在搜出现后再下滑
-  useEffect(() => {
-    const shouldBeCentered = !query
-    if (shouldBeCentered) {
-      const timer = setTimeout(() => setIsDirectCentered(true), 400)
-      return () => clearTimeout(timer)
-    } else {
-      setIsDirectCentered(false)
-    }
-  }, [query])
+  const isEmptySearch = !query
 
   // 搜索历史写入收敛到显式搜索动作，避免 URL 被动同步导致冗余写入
   const { addSearchHistoryItem } = useSearchStore()
@@ -68,13 +56,13 @@ export default function SearchHubView() {
 
   return (
     <div
-      className={`flex flex-col gap-6 p-4 pb-8 transition-all duration-300 ${isDirectCentered ? 'min-h-[60vh] justify-center' : ''}`}
+      className={`flex flex-col gap-6 p-4 pb-8 ${isEmptySearch ? 'min-h-[60vh] justify-center' : ''}`}
     >
       {/* 搜索区域 */}
-      <div className="flex w-full flex-col items-center gap-4 transition-[gap,transform] duration-300 ease-out motion-reduce:transition-none">
+      <div className="flex w-full flex-col items-center gap-4">
         {/* 品牌标识 - 无搜索内容时显示 */}
-        {!query && (
-          <div className="flex animate-[search-brand-in_200ms_ease-out] flex-col items-center gap-2 motion-reduce:animate-none">
+        {isEmptySearch && (
+          <div className="flex flex-col items-center gap-2">
             <OkiLogo size={56} />
             <span className="text-muted-foreground text-sm tracking-wide">发现你的下一部好剧</span>
           </div>
@@ -90,8 +78,8 @@ export default function SearchHubView() {
         </div>
 
         {/* 搜索历史徽标 */}
-        {!query && searchHistory.length > 0 && (
-            <div className="flex w-full max-w-3xl animate-[route-fade-in_200ms_ease-out] flex-col gap-2 motion-reduce:animate-none">
+        {isEmptySearch && searchHistory.length > 0 && (
+            <div className="flex w-full max-w-3xl flex-col gap-2">
               <div className="flex items-center justify-between px-1">
                 <span className="text-muted-foreground text-xs">最近搜索</span>
                 <button

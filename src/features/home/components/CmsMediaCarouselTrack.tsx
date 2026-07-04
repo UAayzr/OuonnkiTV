@@ -61,7 +61,7 @@ export function CmsMediaCarouselTrack({ items, slidesToScroll }: CmsMediaCarouse
         <Button
           variant="outline"
           size="icon"
-          className="absolute top-1/2 -left-5 size-10 -translate-y-1/2 rounded-full transition-opacity duration-300 md:size-12 lg:opacity-0 lg:group-hover/carousel:opacity-100 dark:bg-zinc-800"
+          className="absolute top-1/2 -left-5 size-10 -translate-y-1/2 rounded-full transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-[calc(50%+1px)] active:-translate-y-1/2 md:size-12 lg:opacity-0 lg:group-hover/carousel:opacity-100 dark:bg-zinc-800"
           onClick={() => carouselApi?.scrollPrev()}
         >
           <ChevronLeft className="size-4 translate-x-1.5 md:size-6 md:translate-x-0.5" />
@@ -71,7 +71,7 @@ export function CmsMediaCarouselTrack({ items, slidesToScroll }: CmsMediaCarouse
         <Button
           variant="outline"
           size="icon"
-          className="absolute top-1/2 -right-5 size-10 -translate-y-1/2 rounded-full transition-opacity duration-300 md:size-12 lg:opacity-0 lg:group-hover/carousel:opacity-100 dark:bg-zinc-800"
+          className="absolute top-1/2 -right-5 size-10 -translate-y-1/2 rounded-full transition-[opacity,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-[calc(50%+1px)] active:-translate-y-1/2 md:size-12 lg:opacity-0 lg:group-hover/carousel:opacity-100 dark:bg-zinc-800"
           onClick={() => carouselApi?.scrollNext()}
         >
           <ChevronRight className="size-4 -translate-x-1.5 md:size-6 md:-translate-x-0.5" />

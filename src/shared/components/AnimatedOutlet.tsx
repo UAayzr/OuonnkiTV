@@ -32,7 +32,7 @@ export default function AnimatedOutlet() {
   return (
     <div
       key={deferredPathname}
-      className="h-full animate-[route-fade-in_180ms_ease-out] motion-reduce:animate-none"
+      className="h-full animate-[route-fade-in_var(--motion-duration-pop)_var(--motion-ease-soft-rebound)] motion-reduce:animate-none"
     >
       {displayedOutlet}
     </div>
@@ -79,7 +79,7 @@ export function CustomAnimatedOutlet({
   return (
     <div
       key={animationKey}
-      className={`${className} animate-[route-fade-in_180ms_ease-out] motion-reduce:animate-none`}
+      className={`${className} animate-[route-fade-in_var(--motion-duration-pop)_var(--motion-ease-soft-rebound)] motion-reduce:animate-none`}
     >
       {displayedOutlet}
     </div>

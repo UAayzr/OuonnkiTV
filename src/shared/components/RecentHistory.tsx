@@ -50,7 +50,7 @@ const HistoryList = ({
       <ScrollArea className="max-h-[50vh] overflow-y-auto bg-transparent p-2">
         {filteredHistory.map(item => (
           <Card
-            className="@container group mb-[.6rem] h-[30vw] w-full cursor-pointer overflow-hidden border-none bg-white/30 p-0 shadow-md/5 transition-all duration-500 hover:scale-101 hover:shadow-lg md:h-[8rem] md:w-[25rem]"
+            className="@container group mb-[.6rem] h-[30vw] w-full cursor-pointer overflow-hidden border-none bg-white/30 p-0 shadow-md/5 transition-[box-shadow,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px hover:scale-[1.003] hover:shadow-lg active:translate-y-0 active:scale-[0.99] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 md:h-[8rem] md:w-[25rem]"
             key={getHistoryItemKey(item)}
           >
             <NavLink className="w-full" to={buildHistoryPlayPath(item)}>
@@ -60,7 +60,7 @@ const HistoryList = ({
                     <img
                       alt={item.title}
                       loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-[300ms] ease-[var(--motion-ease-soft-rebound)] group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                       src={item.imageUrl}
                     />
                   </div>
@@ -82,7 +82,7 @@ const HistoryList = ({
                     <div className="flex items-center justify-center gap-[.6rem] text-[3.5cqw] text-gray-500 md:text-sm">
                       <p>{dayjs(item.timestamp).fromNow()}</p>
                       <div
-                        className="flex h-[1.5rem] w-[1.5rem] items-center justify-center rounded-full text-[#888888] transition-colors duration-300 hover:bg-[#f0f0f0] hover:text-[#d6204b]"
+                        className="flex h-[1.5rem] w-[1.5rem] items-center justify-center rounded-full text-[#888888] transition-[background-color,color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px hover:bg-[#f0f0f0] hover:text-[#d6204b] active:translate-y-0 active:scale-[0.94] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
                         onClick={e => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -93,7 +93,7 @@ const HistoryList = ({
                       </div>
                     </div>
                   </div>
-                  <div className="line-clamp-1 text-[4.5cqw] font-bold text-gray-700 transition-colors duration-200 group-hover:text-indigo-400 group-hover:underline md:text-lg">
+                  <div className="line-clamp-1 text-[4.5cqw] font-bold text-gray-700 transition-colors duration-[var(--motion-duration-tap)] group-hover:text-indigo-400 group-hover:underline md:text-lg">
                     {item.title}
                   </div>
                   <div className="flex w-full items-center justify-between gap-[2cqw] text-[3cqw] md:gap-2 md:text-xs">
@@ -142,7 +142,7 @@ export default function RecentHistory() {
                 <div className="flex flex-1 items-center justify-end">
                   {viewingHistory.length > 0 && (
                     <div
-                      className="flex items-center justify-center gap-1 pr-3 text-[#aaaaaa] transition-colors duration-300 hover:cursor-pointer hover:text-[#666666]"
+                      className="flex items-center justify-center gap-1 pr-3 text-[#aaaaaa] transition-[color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px hover:cursor-pointer hover:text-[#666666] active:translate-y-0 active:scale-[0.982] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
                       onClick={clearViewingHistory}
                     >
                       <CloseIcon size={16} />
@@ -166,7 +166,7 @@ export default function RecentHistory() {
         createPortal(
           <div
             className={clsx(
-              'fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/50 opacity-0 shadow-xl/30 shadow-gray-500/30 backdrop-blur-xl transition-opacity duration-2000',
+              'fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/50 opacity-0 shadow-xl/30 shadow-gray-500/30 backdrop-blur-xl transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
               isOpen && 'opacity-100',
             )}
             onClick={() => setIsOpen(false)}
@@ -178,7 +178,7 @@ export default function RecentHistory() {
                 <div className="flex flex-1 items-center justify-end">
                   {viewingHistory.length > 0 && (
                     <div
-                      className="flex items-center justify-center gap-1 text-[#aaaaaa] transition-colors duration-300 hover:text-[#666666]"
+                      className="flex items-center justify-center gap-1 text-[#aaaaaa] transition-[color,transform] duration-[var(--motion-duration-tap)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px hover:text-[#666666] active:translate-y-0 active:scale-[0.982] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
                       onClick={e => {
                         e.stopPropagation()
                         clearViewingHistory()

@@ -118,7 +118,7 @@ export function UnderlineTabs<TKey extends string = string>({
                   <span
                     data-layout-id={layoutId}
                     className={cn(
-                      'absolute right-0 bottom-0 left-0 h-0.5 animate-[underline-in_180ms_ease-out] rounded-full bg-primary motion-reduce:animate-none',
+                      'absolute right-0 bottom-0 left-0 h-0.5 animate-[underline-in_var(--motion-duration-pop)_var(--motion-ease-rebound)] rounded-full bg-primary motion-reduce:animate-none',
                       option.indicatorClassName,
                       indicatorClassName,
                     )}
@@ -133,14 +133,14 @@ export function UnderlineTabs<TKey extends string = string>({
         <>
           <div
             className={cn(
-              'pointer-events-none absolute top-0 bottom-[3px] left-0 z-10 w-9 rounded-r-2xl bg-gradient-to-r from-background/85 via-background/45 to-transparent transition-opacity duration-300 ease-out',
+              'pointer-events-none absolute top-0 bottom-[3px] left-0 z-10 w-9 rounded-r-2xl bg-gradient-to-r from-background/85 via-background/45 to-transparent transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)]',
               edgeHint.left ? 'opacity-100' : 'opacity-0',
               leftEdgeClassName,
             )}
           />
           <div
             className={cn(
-              'pointer-events-none absolute top-0 right-0 bottom-[3px] z-10 w-10 rounded-l-2xl bg-gradient-to-l from-background/85 via-background/45 to-transparent transition-opacity duration-300 ease-out',
+              'pointer-events-none absolute top-0 right-0 bottom-[3px] z-10 w-10 rounded-l-2xl bg-gradient-to-l from-background/85 via-background/45 to-transparent transition-opacity duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-standard)]',
               edgeHint.right ? 'opacity-100' : 'opacity-0',
               rightEdgeClassName,
             )}
