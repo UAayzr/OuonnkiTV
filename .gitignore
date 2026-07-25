@@ -10,6 +10,11 @@ lerna-debug.log*
 node_modules
 dist
 .pnpm-store
+.pnpm-xdg-cache
+.pnpm-xdg-config
+.pnpm-xdg-data
+.pnpm-xdg-state
+coverage
 dist-ssr
 *.local
 
