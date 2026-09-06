@@ -14,6 +14,7 @@ export default mergeConfig(
         'api/**/*.test.{ts,tsx}',
         'functions/**/*.test.{ts,tsx}',
         'netlify/**/*.test.{ts,tsx}',
+        'scripts/**/*.test.{ts,tsx}',
         'proxy-server.test.{ts,tsx}',
       ],
       setupFiles: ['./vitest.setup.ts'],

@@ -8,6 +8,7 @@ import DeferredToaster from '@/shared/components/DeferredToaster'
 
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import { getPublicEnv } from '@/shared/config/runtimeEnv'
 
 const root = document.getElementById('root')!
 
@@ -16,7 +17,7 @@ const app = (
     <ThemeColorProvider>
       <AppRouter />
       <DeferredToaster />
-      {import.meta.env.OKI_DISABLE_ANALYTICS !== 'true' && (
+      {getPublicEnv('OKI_DISABLE_ANALYTICS') !== 'true' && (
         <>
           <Analytics />
           <SpeedInsights />

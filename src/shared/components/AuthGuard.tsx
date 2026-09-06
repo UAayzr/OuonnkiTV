@@ -6,6 +6,7 @@ import { Spinner } from '@/shared/components/ui/spinner'
 import { useAuthStore } from '@/shared/store/authStore'
 import { OkiLogo } from '@/shared/components/icons'
 import { toast } from 'sonner'
+import { getPublicEnv } from '@/shared/config/runtimeEnv'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -21,7 +22,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const revealOriginRef = useRef('50% 50%')
 
-  const accessPassword = import.meta.env.OKI_ACCESS_PASSWORD
+  const accessPassword = getPublicEnv('OKI_ACCESS_PASSWORD')
   const isProtectionEnabled = !!accessPassword && accessPassword.trim() !== ''
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import { useApiStore } from '@/shared/store/apiStore'
 import { useSubscriptionAutoRefresh } from '@/shared/hooks/useSubscriptionAutoRefresh'
 import { useScrollChromeVisibility } from '@/shared/hooks'
 import { useLocation } from 'react-router'
+import { getInitialContentConfigId } from '@/shared/config/runtimeEnv'
 
 const UpdateModal = lazy(() => import('@/shared/components/UpdateModal'))
 
@@ -32,10 +33,13 @@ export default function MainLayout() {
 
   // 初始化逻辑 (从 MyRouter 迁移)
   useEffect(() => {
-    const needsInitialization = localStorage.getItem('envSourcesInitialized') !== 'true'
+    // 以初始内容配置的哈希作为标记：环境变量（含 Docker 运行时配置）变化时触发一次重新初始化
+    const initialContentConfigId = getInitialContentConfigId()
+    const needsInitialization =
+      localStorage.getItem('initialContentConfigId') !== initialContentConfigId
     if (needsInitialization) {
       initializeEnvSources()
-      localStorage.setItem('envSourcesInitialized', 'true')
+      localStorage.setItem('initialContentConfigId', initialContentConfigId)
     }
   }, [initializeEnvSources])
 
