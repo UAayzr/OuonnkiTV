@@ -30,7 +30,7 @@ interface FakeArt {
   emit: (name: string, payload?: unknown) => void
 }
 
-const createFakeArt = (): FakeArt => {
+const createFakeArt = (options: { fullscreen?: boolean } = {}): FakeArt => {
   const $player = document.createElement('div')
   const video = document.createElement('video')
   $player.appendChild(video)
@@ -46,7 +46,7 @@ const createFakeArt = (): FakeArt => {
     duration: 120,
     playing: false,
     playbackRate: 1,
-    fullscreen: false,
+    fullscreen: options.fullscreen ?? false,
     fullscreenWeb: false,
     isLock: false,
     seek: 0,
@@ -72,6 +72,7 @@ const createFakeArt = (): FakeArt => {
 const renderGestures = (options: {
   art: Artplayer
   onSurfaceTap?: () => void
+  onSeekGesturePreviewChange?: (time: number) => void
   swipeGestureEnabled?: boolean
 }) => {
   return renderHook(() =>
@@ -80,6 +81,7 @@ const renderGestures = (options: {
       swipeGestureEnabled: options.swipeGestureEnabled ?? false,
       longPressPlaybackRate: 2,
       onSurfaceTap: options.onSurfaceTap,
+      onSeekGesturePreviewChange: options.onSeekGesturePreviewChange,
     }),
   )
 }
@@ -190,6 +192,45 @@ describe('usePlayerGestures', () => {
       video.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }))
     })
 
+    expect(onSurfaceTap).not.toHaveBeenCalled()
+  })
+
+  it('全屏下横向滑动触发 seek 预览', () => {
+    const { art, $player } = createFakeArt({ fullscreen: true })
+    const onSeekGesturePreviewChange = vi.fn()
+    renderGestures({ art, swipeGestureEnabled: true, onSeekGesturePreviewChange })
+
+    act(() => {
+      const start = { clientX: 50, clientY: 80, identifier: 1 }
+      const moved = { clientX: 160, clientY: 82, identifier: 1 }
+      $player.dispatchEvent(makeTouchEvent('touchstart', [start]))
+      $player.dispatchEvent(makeTouchEvent('touchmove', [moved]))
+      $player.dispatchEvent(makeTouchEvent('touchend', [moved]))
+    })
+
+    expect(onSeekGesturePreviewChange).toHaveBeenCalled()
+  })
+
+  it('纵向滑动不接管：不触发 seek 预览，也不会被误判成轻点', () => {
+    const { art, $player } = createFakeArt({ fullscreen: true })
+    const onSurfaceTap = vi.fn()
+    const onSeekGesturePreviewChange = vi.fn()
+    renderGestures({
+      art,
+      swipeGestureEnabled: true,
+      onSurfaceTap,
+      onSeekGesturePreviewChange,
+    })
+
+    act(() => {
+      const start = { clientX: 50, clientY: 40, identifier: 1 }
+      const moved = { clientX: 52, clientY: 190, identifier: 1 }
+      $player.dispatchEvent(makeTouchEvent('touchstart', [start]))
+      $player.dispatchEvent(makeTouchEvent('touchmove', [moved]))
+      $player.dispatchEvent(makeTouchEvent('touchend', [moved]))
+    })
+
+    expect(onSeekGesturePreviewChange).not.toHaveBeenCalled()
     expect(onSurfaceTap).not.toHaveBeenCalled()
   })
 })

@@ -1,6 +1,9 @@
 import { clampValue } from './playerUtils'
 
-/** 手势方向：水平（seek）、垂直（亮度/音量）、null（未确定） */
+/**
+ * 手势方向：水平（seek）、垂直（不接管）、null（未确定）。
+ * 垂直只作为"这不是横向手势"的判据，亮度/音量滑动已移除。
+ */
 export type GestureAxis = 'horizontal' | 'vertical' | null
 
 export const GESTURE_CONFIG = {
@@ -10,15 +13,6 @@ export const GESTURE_CONFIG = {
   doubleTapWindowMs: 320,
   /** 双击判定位移容差（像素） */
   doubleTapMoveTolerancePx: 12,
-  /** 音量/亮度全程滑动占屏幕高度的比例 */
-  fullRangeSwipeRatio: 0.9,
-} as const
-
-/** 亮度取值范围（默认 1 = 原始画面） */
-export const BRIGHTNESS = {
-  min: 0.25,
-  max: 1.75,
-  default: 1,
 } as const
 
 /** 达到阈值后判定手势方向；未达到返回 null（继续等待） */
@@ -31,12 +25,6 @@ export const resolveGestureAxis = (
   const absY = Math.abs(deltaY)
   if (absX < threshold && absY < threshold) return null
   return absX >= absY ? 'horizontal' : 'vertical'
-}
-
-/** 是否落在播放器左半屏（用于亮度区） */
-export const isLeftHalf = (x: number, width: number): boolean => {
-  if (width <= 0) return true
-  return x < width / 2
 }
 
 /**
@@ -54,29 +42,6 @@ export const computeSeekTarget = (
   const safeWidth = width > 0 ? width : 1
   const offset = (deltaX / safeWidth) * duration
   return clampValue(startTime + offset, 0, duration)
-}
-
-/** 精确音量：垂直滑动距离占屏高比例映射到 0~1 */
-export const computeVolumeTarget = (
-  startVolume: number,
-  deltaY: number,
-  height: number,
-): number => {
-  const effectiveHeight = Math.max(1, height * GESTURE_CONFIG.fullRangeSwipeRatio)
-  const offset = -deltaY / effectiveHeight
-  return clampValue(startVolume + offset, 0, 1)
-}
-
-/** 精确亮度：垂直滑动距离占屏高比例映射到 [min, max] */
-export const computeBrightnessTarget = (
-  startBrightness: number,
-  deltaY: number,
-  height: number,
-): number => {
-  const effectiveHeight = Math.max(1, height * GESTURE_CONFIG.fullRangeSwipeRatio)
-  const range = BRIGHTNESS.max - BRIGHTNESS.min
-  const offset = (-deltaY / effectiveHeight) * range
-  return clampValue(startBrightness + offset, BRIGHTNESS.min, BRIGHTNESS.max)
 }
 
 export interface TapRecord {

@@ -77,8 +77,6 @@ vi.mock('@/features/player/hooks', () => ({
     currentPageEpisodes: [],
   }),
   usePlayerGestureOverlays: () => ({
-    gestureVolumeLevel: null,
-    gestureBrightnessLevel: null,
     gestureSeekPreviewTime: null,
   }),
   usePlayerNotices: () => ({ transientNotices: [], showPlayerNotice: vi.fn() }),

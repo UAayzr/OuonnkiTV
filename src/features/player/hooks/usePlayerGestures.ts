@@ -3,12 +3,9 @@ import type Artplayer from 'artplayer'
 import { isPlayerControlTarget } from '@/features/player/lib/playerCore'
 import { clampValue } from '@/features/player/lib/playerUtils'
 import {
-  computeBrightnessTarget,
   computeSeekTarget,
-  computeVolumeTarget,
   GESTURE_CONFIG,
   isDoubleTap,
-  isLeftHalf,
   resolveGestureAxis,
   type GestureAxis,
   type TapRecord,
@@ -26,13 +23,8 @@ interface GestureSession {
   startX: number
   startY: number
   startTime: number
-  startVolume: number
-  startBrightness: number
   playerWidth: number
-  playerHeight: number
   axis: GestureAxis
-  /** 垂直手势落位：true = 亮度（左半屏），false = 音量（右半屏） */
-  isBrightness: boolean
   /** 水平滑动待 seek 的目标时间 */
   pendingSeekTime: number | null
   longPressTriggered: boolean
@@ -45,21 +37,8 @@ interface UsePlayerGesturesParams {
   longPressPlaybackRate: number
   /** 画面单击（非双击）：用于切换控制条显隐 */
   onSurfaceTap?: () => void
-  onVolumeGestureChange?: (volume: number) => void
-  onVolumeGestureEnd?: () => void
-  onBrightnessGestureChange?: (brightness: number) => void
-  onBrightnessGestureEnd?: () => void
   onSeekGesturePreviewChange?: (previewTime: number) => void
   onSeekGesturePreviewEnd?: () => void
-}
-
-/** 从视频元素当前 filter 解析亮度值（无则默认 1） */
-const readBrightnessFromVideo = (art: Artplayer): number => {
-  const filter = (art.video as HTMLVideoElement).style.filter || ''
-  const match = filter.match(/brightness\(\s*([\d.]+)\s*\)/)
-  if (!match) return 1
-  const parsed = Number.parseFloat(match[1])
-  return Number.isFinite(parsed) ? parsed : 1
 }
 
 const isFullscreenActive = (art: Artplayer): boolean => {
@@ -86,7 +65,9 @@ const isFullscreenActive = (art: Artplayer): boolean => {
  * - 单击 → onSurfaceTap（切换控制条显隐），经双击窗口延迟确认
  * - 双击 → 播放/暂停
  * - 右键 → 完全禁用
- * - 触屏全屏下：水平滑 seek、左半屏上下滑亮度、右半屏上下滑音量、长按加速
+ * - 触屏全屏下：水平滑 seek、长按加速
+ *
+ * 上下滑动不接管：亮度/音量手势已移除，纵向滑动一律交还浏览器。
  *
  * 全部监听注册在捕获阶段，先于 Artplayer 内核（冒泡阶段）的事件代理执行，
  * 因此能彻底覆盖其"单击 toggle / 双击全屏 / 右键菜单"的默认行为。
@@ -96,28 +77,16 @@ export function usePlayerGestures({
   swipeGestureEnabled,
   longPressPlaybackRate,
   onSurfaceTap,
-  onVolumeGestureChange,
-  onVolumeGestureEnd,
-  onBrightnessGestureChange,
-  onBrightnessGestureEnd,
   onSeekGesturePreviewChange,
   onSeekGesturePreviewEnd,
 }: UsePlayerGesturesParams) {
   const callbacksRef = useRef({
     onSurfaceTap,
-    onVolumeGestureChange,
-    onVolumeGestureEnd,
-    onBrightnessGestureChange,
-    onBrightnessGestureEnd,
     onSeekGesturePreviewChange,
     onSeekGesturePreviewEnd,
   })
   callbacksRef.current = {
     onSurfaceTap,
-    onVolumeGestureChange,
-    onVolumeGestureEnd,
-    onBrightnessGestureChange,
-    onBrightnessGestureEnd,
     onSeekGesturePreviewChange,
     onSeekGesturePreviewEnd,
   }
@@ -154,15 +123,7 @@ export function usePlayerGestures({
     }
 
     const resetSession = () => {
-      const session = sessionRef.current
-      if (session?.axis === 'vertical') {
-        if (session.isBrightness) {
-          callbacksRef.current.onBrightnessGestureEnd?.()
-        } else {
-          callbacksRef.current.onVolumeGestureEnd?.()
-        }
-      }
-      if (session?.axis === 'horizontal') {
+      if (sessionRef.current?.axis === 'horizontal') {
         callbacksRef.current.onSeekGesturePreviewEnd?.()
       }
       clearLongPressTimer()
@@ -179,7 +140,6 @@ export function usePlayerGestures({
         x: clientX - rect.left,
         y: clientY - rect.top,
         width: rect.width,
-        height: rect.height,
       }
     }
 
@@ -263,19 +223,15 @@ export function usePlayerGestures({
       const touch = event.changedTouches.item(0)
       if (!touch) return
 
-      const { x, y, width, height } = toLocal(touch.clientX, touch.clientY)
+      const { x, y, width } = toLocal(touch.clientX, touch.clientY)
 
       sessionRef.current = {
         touchId: touch.identifier,
         startX: x,
         startY: y,
         startTime: art.currentTime || 0,
-        startVolume: art.video.volume,
-        startBrightness: readBrightnessFromVideo(art),
         playerWidth: width,
-        playerHeight: height,
         axis: null,
-        isBrightness: false,
         pendingSeekTime: null,
         longPressTriggered: false,
       }
@@ -317,16 +273,14 @@ export function usePlayerGestures({
         // 已确认是滑动，抑制浏览器随后可能补发的合成 click
         suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
 
-        // 非全屏（或未开启手势）时交还浏览器：页面滚动/正常触摸行为
-        if (!canSwipe()) {
+        // 纵向滑动不接管（亮度/音量手势已移除），非全屏时同样交还浏览器：
+        // 两者都结束本次会话，后续 move 直接忽略，也不会被误判成轻点。
+        if (axis !== 'horizontal' || !canSwipe()) {
           resetSession()
           return
         }
 
         session.axis = axis
-        if (axis === 'vertical') {
-          session.isBrightness = isLeftHalf(session.startX, session.playerWidth)
-        }
         clearLongPressTimer()
       }
 
@@ -339,32 +293,6 @@ export function usePlayerGestures({
         )
         session.pendingSeekTime = previewTime
         callbacksRef.current.onSeekGesturePreviewChange?.(previewTime)
-        if (event.cancelable) event.preventDefault()
-        return
-      }
-
-      if (session.axis === 'vertical') {
-        if (session.isBrightness) {
-          const nextBrightness = computeBrightnessTarget(
-            session.startBrightness,
-            deltaY,
-            session.playerHeight,
-          )
-          callbacksRef.current.onBrightnessGestureChange?.(nextBrightness)
-        } else {
-          const nextVolume = computeVolumeTarget(
-            session.startVolume,
-            deltaY,
-            session.playerHeight,
-          )
-          if (Math.abs(nextVolume - art.video.volume) >= 0.005) {
-            art.video.volume = nextVolume
-            if (nextVolume > 0 && art.video.muted) {
-              art.video.muted = false
-            }
-          }
-          callbacksRef.current.onVolumeGestureChange?.(nextVolume)
-        }
         if (event.cancelable) event.preventDefault()
       }
     }
@@ -392,17 +320,6 @@ export function usePlayerGestures({
           art.seek = session.pendingSeekTime
         }
         callbacksRef.current.onSeekGesturePreviewEnd?.()
-        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
-        sessionRef.current = null
-        return
-      }
-
-      if (session.axis === 'vertical') {
-        if (session.isBrightness) {
-          callbacksRef.current.onBrightnessGestureEnd?.()
-        } else {
-          callbacksRef.current.onVolumeGestureEnd?.()
-        }
         suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
         sessionRef.current = null
         return

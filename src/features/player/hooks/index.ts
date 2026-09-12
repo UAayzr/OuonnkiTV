@@ -1,7 +1,6 @@
 export * from './useEpisodePagination'
 export * from './usePlayerDetail'
 export * from './usePlayerNotices'
-export * from './useBrightness'
 export * from './usePlayerState'
 export * from './usePlayerGestures'
 export * from './usePlayerGestureOverlays'

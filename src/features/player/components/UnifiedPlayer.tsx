@@ -2,7 +2,6 @@ import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import Artplayer from 'artplayer'
-import { Sun } from 'lucide-react'
 import { toast } from 'sonner'
 import { Spinner } from '@/shared/components/ui/spinner'
 import { useDocumentTitle, useCmsClient, useIdleReady } from '@/shared/hooks'
@@ -30,7 +29,6 @@ import {
 import {
   attachHlsPlayback,
   BARE_PLAYER_OPTIONS,
-  BRIGHTNESS,
   computeMiniPlayerRect,
   createBareArtplayer,
   formatPlaybackTime,
@@ -127,13 +125,12 @@ export default function UnifiedPlayer() {
     toggleControls()
   }, [settingOpen, toggleControls])
 
-  const { gestureVolumeLevel, gestureBrightnessLevel, gestureSeekPreviewTime } =
-    usePlayerGestureOverlays({
-      art: activeArt,
-      enabled: playback.isMobileGestureEnabled,
-      longPressPlaybackRate: playback.longPressPlaybackRate,
-      onSurfaceTap: handleSurfaceTap,
-    })
+  const { gestureSeekPreviewTime } = usePlayerGestureOverlays({
+    art: activeArt,
+    enabled: playback.isMobileGestureEnabled,
+    longPressPlaybackRate: playback.longPressPlaybackRate,
+    onSurfaceTap: handleSurfaceTap,
+  })
 
   const playerOverlayContainer = activeArt?.template?.$player ?? null
   // 滑动 seek 预览：居中显示，避免与顶部标题条重叠
@@ -151,45 +148,6 @@ export default function UnifiedPlayer() {
           <div className="mt-0.5 text-[11px] tabular-nums text-primary-foreground/65">
             {seekPreviewDelta >= 0 ? '+' : '-'}
             {formatPlaybackTime(Math.abs(seekPreviewDelta))}
-          </div>
-        </div>
-      </div>
-    ) : null
-  const volumeOverlay =
-    gestureVolumeLevel !== null ? (
-      <div className="oki-player-overlay pointer-events-none absolute top-3 left-1/2 z-[160] w-[min(52vw,300px)] -translate-x-1/2">
-        <div className="rounded-full border border-primary-foreground/15 bg-black/70 px-2.5 py-2 shadow-lg backdrop-blur-sm">
-          <div className="mb-1 text-center text-xs text-primary-foreground">{Math.round(gestureVolumeLevel * 100)}%</div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-primary-foreground/20">
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-75"
-              style={{ width: `${Math.round(gestureVolumeLevel * 100)}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    ) : null
-
-  const brightnessOverlay =
-    gestureBrightnessLevel !== null ? (
-      <div className="oki-player-overlay pointer-events-none absolute top-3 left-1/2 z-[160] flex w-[min(52vw,300px)] -translate-x-1/2 items-center gap-2 rounded-full border border-primary-foreground/15 bg-black/70 px-3 py-2 shadow-lg backdrop-blur-sm">
-        <Sun className="size-4 shrink-0 text-primary-foreground" />
-        <div className="flex-1">
-          <div className="mb-1 text-center text-xs text-primary-foreground">
-            {Math.round(gestureBrightnessLevel * 100)}%
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-primary-foreground/20">
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-75"
-              style={{
-                // 亮度条按 BRIGHTNESS 的取值区间归一化，避免把区间边界写死在这里
-                width: `${Math.round(
-                  ((gestureBrightnessLevel - BRIGHTNESS.min) /
-                    (BRIGHTNESS.max - BRIGHTNESS.min)) *
-                    100,
-                )}%`,
-              }}
-            />
           </div>
         </div>
       </div>
@@ -614,12 +572,6 @@ export default function UnifiedPlayer() {
               (playerOverlayContainer
                 ? createPortal(seekPreviewOverlay, playerOverlayContainer)
                 : seekPreviewOverlay)}
-            {volumeOverlay &&
-              (playerOverlayContainer ? createPortal(volumeOverlay, playerOverlayContainer) : volumeOverlay)}
-            {brightnessOverlay &&
-              (playerOverlayContainer
-                ? createPortal(brightnessOverlay, playerOverlayContainer)
-                : brightnessOverlay)}
 
             {/* 自绘控制条（顶部标题条 + 底部进度条/按钮 + 设置面板） */}
             {activeArt && playerOverlayContainer && (
