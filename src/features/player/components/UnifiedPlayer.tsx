@@ -163,7 +163,7 @@ export default function UnifiedPlayer() {
   const longPressRateOverlay =
     gestureLongPressRate !== null ? (
       <div className="oki-player-overlay pointer-events-none absolute top-3 left-1/2 z-[160] -translate-x-1/2">
-        <div className="flex items-center gap-1.5 rounded-full border border-primary-foreground/15 bg-black/70 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+        <div className="flex min-w-28 items-center justify-center gap-12 rounded-full border border-primary-foreground/15 bg-black/50 px-3 py-1.5 shadow-lg backdrop-blur-sm">
           <FastForward className="size-4 shrink-0 text-primary-foreground" />
           <span className="text-sm font-medium tabular-nums text-primary-foreground">
             {gestureLongPressRate}x
