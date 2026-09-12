@@ -61,7 +61,6 @@ const personalConfigSchema = z.object({
         isLoopEnabled: z.boolean().optional(),
         isPipEnabled: z.boolean().optional(),
         isAutoMiniEnabled: z.boolean().optional(),
-        isScreenshotEnabled: z.boolean().optional(),
         isMobileGestureEnabled: z.boolean().optional(),
         longPressPlaybackRate: z.number().min(1).max(5).optional(),
         isFullscreenProgressHidden: z.boolean().optional(),

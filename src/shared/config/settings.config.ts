@@ -26,7 +26,6 @@ export const DEFAULT_SETTINGS = {
     isLoopEnabled: envSettings?.playback?.isLoopEnabled ?? false,
     isPipEnabled: envSettings?.playback?.isPipEnabled ?? true,
     isAutoMiniEnabled: envSettings?.playback?.isAutoMiniEnabled ?? true,
-    isScreenshotEnabled: envSettings?.playback?.isScreenshotEnabled ?? true,
     isMobileGestureEnabled: envSettings?.playback?.isMobileGestureEnabled ?? true,
     longPressPlaybackRate: envSettings?.playback?.longPressPlaybackRate ?? 2,
     isFullscreenProgressHidden: envSettings?.playback?.isFullscreenProgressHidden ?? false,

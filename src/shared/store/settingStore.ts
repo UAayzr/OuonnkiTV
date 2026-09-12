@@ -28,7 +28,6 @@ interface PlaybackSettings {
   isLoopEnabled: boolean
   isPipEnabled: boolean
   isAutoMiniEnabled: boolean
-  isScreenshotEnabled: boolean
   isMobileGestureEnabled: boolean
   longPressPlaybackRate: number
   isFullscreenProgressHidden: boolean
@@ -153,7 +152,6 @@ export const useSettingStore = create<SettingStore>()(
             playback.isLoopEnabled ??= DEFAULT_SETTINGS.playback.isLoopEnabled
             playback.isPipEnabled ??= DEFAULT_SETTINGS.playback.isPipEnabled
             playback.isAutoMiniEnabled ??= DEFAULT_SETTINGS.playback.isAutoMiniEnabled
-            playback.isScreenshotEnabled ??= DEFAULT_SETTINGS.playback.isScreenshotEnabled
             state.playback = playback
           }
           if (version < 5) {

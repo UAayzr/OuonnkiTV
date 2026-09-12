@@ -233,17 +233,6 @@ export default function PlaybackSettings() {
             />
           }
         />
-        <SettingsItem
-          title="截图"
-          description="在播放器中显示截图按钮。"
-          controlClassName="self-end mt-1"
-          control={
-            <Switch
-              checked={playback.isScreenshotEnabled}
-              onCheckedChange={checked => setPlaybackSettings({ isScreenshotEnabled: checked })}
-            />
-          }
-        />
       </SettingsSection>
 
       <SettingsSection

@@ -24,7 +24,6 @@ interface SettingsConfig {
     isLoopEnabled?: boolean
     isPipEnabled?: boolean
     isAutoMiniEnabled?: boolean
-    isScreenshotEnabled?: boolean
     isMobileGestureEnabled?: boolean
     longPressPlaybackRate?: number
     isFullscreenProgressHidden?: boolean
