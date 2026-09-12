@@ -37,6 +37,8 @@ interface UsePlayerGesturesParams {
   longPressPlaybackRate: number
   /** 画面单击（非双击）：用于切换控制条显隐 */
   onSurfaceTap?: () => void
+  /** 长按加速中上报当前倍率，抬手恢复后传 null */
+  onLongPressRateChange?: (rate: number | null) => void
   onSeekGesturePreviewChange?: (previewTime: number) => void
   onSeekGesturePreviewEnd?: () => void
 }
@@ -77,16 +79,19 @@ export function usePlayerGestures({
   swipeGestureEnabled,
   longPressPlaybackRate,
   onSurfaceTap,
+  onLongPressRateChange,
   onSeekGesturePreviewChange,
   onSeekGesturePreviewEnd,
 }: UsePlayerGesturesParams) {
   const callbacksRef = useRef({
     onSurfaceTap,
+    onLongPressRateChange,
     onSeekGesturePreviewChange,
     onSeekGesturePreviewEnd,
   })
   callbacksRef.current = {
     onSurfaceTap,
+    onLongPressRateChange,
     onSeekGesturePreviewChange,
     onSeekGesturePreviewEnd,
   }
@@ -116,6 +121,7 @@ export function usePlayerGestures({
       if (!session?.longPressTriggered) return
       art.playbackRate = clampValue(playbackRateBeforeLongPress, 0.1, 16)
       session.longPressTriggered = false
+      callbacksRef.current.onLongPressRateChange?.(null)
     }
 
     const suppressFollowupClicks = (durationMs: number) => {
@@ -247,11 +253,13 @@ export function usePlayerGestures({
         if (!canSwipe()) return
 
         session.longPressTriggered = true
-        art.playbackRate = clampValue(
+        const rate = clampValue(
           longPressPlaybackRate,
           LONG_PRESS_RATE_MIN,
           LONG_PRESS_RATE_MAX,
         )
+        art.playbackRate = rate
+        callbacksRef.current.onLongPressRateChange?.(rate)
       }, LONG_PRESS_DURATION_MS)
     }
 

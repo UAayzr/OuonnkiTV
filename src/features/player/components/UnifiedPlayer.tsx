@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import Artplayer from 'artplayer'
+import { FastForward } from 'lucide-react'
 import { toast } from 'sonner'
 import { Spinner } from '@/shared/components/ui/spinner'
 import { useDocumentTitle, useCmsClient, useIdleReady } from '@/shared/hooks'
@@ -125,7 +126,7 @@ export default function UnifiedPlayer() {
     toggleControls()
   }, [settingOpen, toggleControls])
 
-  const { gestureSeekPreviewTime } = usePlayerGestureOverlays({
+  const { gestureSeekPreviewTime, gestureLongPressRate } = usePlayerGestureOverlays({
     art: activeArt,
     enabled: playback.isMobileGestureEnabled,
     longPressPlaybackRate: playback.longPressPlaybackRate,
@@ -149,6 +150,24 @@ export default function UnifiedPlayer() {
             {seekPreviewDelta >= 0 ? '+' : '-'}
             {formatPlaybackTime(Math.abs(seekPreviewDelta))}
           </div>
+        </div>
+      </div>
+    ) : null
+
+  /*
+   * 长按加速指示：手机上唯一的倍速开关就是长按（控制条里的倍速按钮是桌面专属），
+   * 没有这个提示用户无从得知当前是否处于加速态。
+   * 与滑动 seek 预览互斥（长按与横滑不会同时成立），但位置错开顶部，
+   * 避免和居中的 seek 预览、右上的临时通知打架。
+   */
+  const longPressRateOverlay =
+    gestureLongPressRate !== null ? (
+      <div className="oki-player-overlay pointer-events-none absolute top-3 left-1/2 z-[160] -translate-x-1/2">
+        <div className="flex items-center gap-1.5 rounded-full border border-primary-foreground/15 bg-black/70 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+          <FastForward className="size-4 shrink-0 text-primary-foreground" />
+          <span className="text-sm font-medium tabular-nums text-primary-foreground">
+            {gestureLongPressRate}x
+          </span>
         </div>
       </div>
     ) : null
@@ -572,6 +591,10 @@ export default function UnifiedPlayer() {
               (playerOverlayContainer
                 ? createPortal(seekPreviewOverlay, playerOverlayContainer)
                 : seekPreviewOverlay)}
+            {longPressRateOverlay &&
+              (playerOverlayContainer
+                ? createPortal(longPressRateOverlay, playerOverlayContainer)
+                : longPressRateOverlay)}
 
             {/* 自绘控制条（顶部标题条 + 底部进度条/按钮 + 设置面板） */}
             {activeArt && playerOverlayContainer && (

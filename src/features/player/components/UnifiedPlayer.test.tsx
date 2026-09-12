@@ -78,6 +78,7 @@ vi.mock('@/features/player/hooks', () => ({
   }),
   usePlayerGestureOverlays: () => ({
     gestureSeekPreviewTime: null,
+    gestureLongPressRate: null,
   }),
   usePlayerNotices: () => ({ transientNotices: [], showPlayerNotice: vi.fn() }),
   usePlayerControlsVisibility: () => ({

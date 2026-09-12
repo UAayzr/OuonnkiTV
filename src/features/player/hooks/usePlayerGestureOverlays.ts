@@ -25,6 +25,8 @@ export function usePlayerGestureOverlays({
   onSurfaceTap,
 }: UsePlayerGestureOverlaysParams) {
   const [gestureSeekPreviewTime, setGestureSeekPreviewTime] = useState<number | null>(null)
+  /** 长按加速中的倍率；null = 未处于长按加速状态 */
+  const [gestureLongPressRate, setGestureLongPressRate] = useState<number | null>(null)
 
   const handleSeekGesturePreviewChange = useCallback((previewTime: number) => {
     setGestureSeekPreviewTime(previewTime)
@@ -34,14 +36,19 @@ export function usePlayerGestureOverlays({
     setGestureSeekPreviewTime(null)
   }, [])
 
+  const handleLongPressRateChange = useCallback((rate: number | null) => {
+    setGestureLongPressRate(rate)
+  }, [])
+
   usePlayerGestures({
     art,
     swipeGestureEnabled: enabled,
     longPressPlaybackRate,
     onSurfaceTap,
+    onLongPressRateChange: handleLongPressRateChange,
     onSeekGesturePreviewChange: handleSeekGesturePreviewChange,
     onSeekGesturePreviewEnd: handleSeekGesturePreviewEnd,
   })
 
-  return { gestureSeekPreviewTime }
+  return { gestureSeekPreviewTime, gestureLongPressRate }
 }

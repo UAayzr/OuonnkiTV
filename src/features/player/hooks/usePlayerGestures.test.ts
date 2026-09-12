@@ -73,6 +73,7 @@ const renderGestures = (options: {
   art: Artplayer
   onSurfaceTap?: () => void
   onSeekGesturePreviewChange?: (time: number) => void
+  onLongPressRateChange?: (rate: number | null) => void
   swipeGestureEnabled?: boolean
 }) => {
   return renderHook(() =>
@@ -82,6 +83,7 @@ const renderGestures = (options: {
       longPressPlaybackRate: 2,
       onSurfaceTap: options.onSurfaceTap,
       onSeekGesturePreviewChange: options.onSeekGesturePreviewChange,
+      onLongPressRateChange: options.onLongPressRateChange,
     }),
   )
 }
@@ -232,5 +234,23 @@ describe('usePlayerGestures', () => {
 
     expect(onSeekGesturePreviewChange).not.toHaveBeenCalled()
     expect(onSurfaceTap).not.toHaveBeenCalled()
+  })
+
+  it('长按触发加速时上报倍率，抬手恢复后清空', () => {
+    const { art, $player } = createFakeArt({ fullscreen: true })
+    const onLongPressRateChange = vi.fn()
+    renderGestures({ art, swipeGestureEnabled: true, onLongPressRateChange })
+
+    act(() => {
+      const touch = { clientX: 50, clientY: 50, identifier: 1 }
+      $player.dispatchEvent(makeTouchEvent('touchstart', [touch]))
+      vi.advanceTimersByTime(500)
+      expect(art.playbackRate).toBe(2)
+      $player.dispatchEvent(makeTouchEvent('touchend', [touch]))
+    })
+
+    expect(onLongPressRateChange).toHaveBeenNthCalledWith(1, 2)
+    expect(onLongPressRateChange).toHaveBeenLastCalledWith(null)
+    expect(art.playbackRate).toBe(1)
   })
 })
