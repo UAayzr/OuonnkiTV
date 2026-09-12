@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import Artplayer from 'artplayer'
+import { Sun } from 'lucide-react'
 import { toast } from 'sonner'
 import { Spinner } from '@/shared/components/ui/spinner'
 import { useDocumentTitle, useCmsClient, useIdleReady } from '@/shared/hooks'
@@ -13,6 +14,7 @@ import { buildCmsPlayPath } from '@/shared/lib/routes'
 import type { VideoItem } from '@/shared/types'
 import { useFavoritesStore } from '@/features/favorites/store/favoritesStore'
 import {
+  PlayerControls,
   PlayerEpisodePanel,
   PlayerErrorState,
   PlayerInfoAndRecommendations,
@@ -20,11 +22,18 @@ import {
 } from '@/features/player/components'
 import {
   useEpisodePagination,
+  usePlayerControlsVisibility,
   usePlayerDetail,
   usePlayerGestureOverlays,
   usePlayerNotices,
 } from '@/features/player/hooks'
-import { attachHlsPlayback, computeMiniPlayerRect, validatePlayerRoute } from '@/features/player/lib'
+import {
+  attachHlsPlayback,
+  BARE_PLAYER_OPTIONS,
+  computeMiniPlayerRect,
+  createBareArtplayer,
+  validatePlayerRoute,
+} from '@/features/player/lib'
 
 interface PlayerRouteParams {
   [key: string]: string | undefined
@@ -96,37 +105,94 @@ export default function UnifiedPlayer() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [activeArt, setActiveArt] = useState<Artplayer | null>(null)
+  const [settingOpen, setSettingOpen] = useState(false)
 
   useEffect(() => {
     viewingHistoryRef.current = viewingHistory
     playbackRef.current = playback
   }, [playback, viewingHistory])
 
+  // 切换集数（播放器实例重建）时收起设置面板
+  useEffect(() => {
+    setSettingOpen(false)
+  }, [activeArt])
+
   const { transientNotices, showPlayerNotice } = usePlayerNotices()
-  const { gestureVolumeLevel, gestureSeekPreviewTime } = usePlayerGestureOverlays({
-    art: activeArt,
-    enabled: playback.isMobileGestureEnabled,
-    longPressPlaybackRate: playback.longPressPlaybackRate,
-  })
+  // 控制条显隐时钟：画面单击切换 + 无操作自动隐藏（与手势层共用一份状态）
+  const {
+    visible: controlsVisible,
+    toggleControls,
+    setInteracting,
+  } = usePlayerControlsVisibility(activeArt)
+
+  // 画面单击：优先收起设置面板，否则切换控制条显隐
+  const handleSurfaceTap = useCallback(() => {
+    if (settingOpen) {
+      setSettingOpen(false)
+      return
+    }
+    toggleControls()
+  }, [settingOpen, toggleControls])
+
+  const { gestureVolumeLevel, gestureBrightnessLevel, gestureSeekPreviewTime } =
+    usePlayerGestureOverlays({
+      art: activeArt,
+      enabled: playback.isMobileGestureEnabled,
+      longPressPlaybackRate: playback.longPressPlaybackRate,
+      onSurfaceTap: handleSurfaceTap,
+    })
 
   const playerOverlayContainer = activeArt?.template?.$player ?? null
+  // 滑动 seek 预览：居中显示，避免与顶部标题条重叠
+  const seekPreviewDelta =
+    gestureSeekPreviewTime !== null && activeArt
+      ? gestureSeekPreviewTime - (activeArt.currentTime || 0)
+      : 0
   const seekPreviewOverlay =
     gestureSeekPreviewTime !== null ? (
-      <div className="pointer-events-none absolute top-3 left-3 z-[160]">
-        <div className="rounded-md border border-white/15 bg-black/65 px-2.5 py-1.5 text-xs text-white shadow-lg backdrop-blur-sm">
-          预览 {formatDurationLabel(gestureSeekPreviewTime)}
+      <div className="oki-player-overlay pointer-events-none absolute top-1/2 left-1/2 z-[160] -translate-x-1/2 -translate-y-1/2">
+        <div className="rounded-lg border border-primary-foreground/15 bg-black/70 px-4 py-2 text-center shadow-xl backdrop-blur-sm">
+          <div className="text-lg font-medium tabular-nums text-primary-foreground">
+            {formatDurationLabel(gestureSeekPreviewTime)}
+          </div>
+          <div className="mt-0.5 text-[11px] tabular-nums text-primary-foreground/65">
+            {seekPreviewDelta >= 0 ? '+' : '-'}
+            {formatDurationLabel(Math.abs(seekPreviewDelta))}
+          </div>
         </div>
       </div>
     ) : null
   const volumeOverlay =
     gestureVolumeLevel !== null ? (
-      <div className="pointer-events-none absolute top-3 left-1/2 z-[160] w-[min(52vw,300px)] -translate-x-1/2">
-        <div className="rounded-full border border-white/15 bg-black/70 px-2.5 py-2 shadow-lg backdrop-blur-sm">
-          <div className="mb-1 text-center text-xs text-white">{Math.round(gestureVolumeLevel * 100)}%</div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
+      <div className="oki-player-overlay pointer-events-none absolute top-3 left-1/2 z-[160] w-[min(52vw,300px)] -translate-x-1/2">
+        <div className="rounded-full border border-primary-foreground/15 bg-black/70 px-2.5 py-2 shadow-lg backdrop-blur-sm">
+          <div className="mb-1 text-center text-xs text-primary-foreground">{Math.round(gestureVolumeLevel * 100)}%</div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-primary-foreground/20">
             <div
-              className="h-full rounded-full bg-white transition-[width] duration-75"
+              className="h-full rounded-full bg-primary transition-[width] duration-75"
               style={{ width: `${Math.round(gestureVolumeLevel * 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    ) : null
+
+  const brightnessOverlay =
+    gestureBrightnessLevel !== null ? (
+      <div className="oki-player-overlay pointer-events-none absolute top-3 left-1/2 z-[160] flex w-[min(52vw,300px)] -translate-x-1/2 items-center gap-2 rounded-full border border-primary-foreground/15 bg-black/70 px-3 py-2 shadow-lg backdrop-blur-sm">
+        <Sun className="size-4 shrink-0 text-primary-foreground" />
+        <div className="flex-1">
+          <div className="mb-1 text-center text-xs text-primary-foreground">
+            {Math.round(gestureBrightnessLevel * 100)}%
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-primary-foreground/20">
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-75"
+              style={{
+                width: `${Math.round(
+                  ((gestureBrightnessLevel - 0.25) / (1.75 - 0.25)) * 100,
+                )}%`,
+              }}
             />
           </div>
         </div>
@@ -163,6 +229,15 @@ export default function UnifiedPlayer() {
     }
     return detail.episodes.map((_, index) => `第 ${index + 1} 集`)
   }, [detail])
+
+  const hasNextEpisode = episodes.length > 0 && selectedEpisode < episodes.length - 1
+
+  const handleNextEpisode = useCallback(() => {
+    if (selectedEpisode >= episodes.length - 1) return
+    const nextIndex = selectedEpisode + 1
+    navigate(buildCurrentPlayPath(nextIndex), { replace: true })
+    showPlayerNotice(`即将播放下一集: ${episodes[nextIndex]}`)
+  }, [buildCurrentPlayPath, episodes, navigate, selectedEpisode, showPlayerNotice])
 
   useEffect(() => {
     if (!shouldFallbackEpisodeToFirst(episodes.length, selectedEpisode)) return
@@ -217,7 +292,9 @@ export default function UnifiedPlayer() {
       showPlayerNotice(`即将播放下一集: ${episodes[nextIndex]}`)
     }
 
-    const art = new Artplayer({
+    // 裸内核：默认皮肤与内置交互全部关闭，交互由 usePlayerGestures 在捕获阶段接管
+    const art = createBareArtplayer({
+      ...BARE_PLAYER_OPTIONS,
       container: containerRef.current,
       url: detail.episodes[selectedEpisode],
       volume: playbackRef.current.defaultVolume,
@@ -226,24 +303,15 @@ export default function UnifiedPlayer() {
       autoplay: false,
       pip: playbackRef.current.isPipEnabled,
       autoSize: false,
-      autoMini: false,
-      screenshot: playbackRef.current.isScreenshotEnabled,
-      setting: true,
       loop: playbackRef.current.isLoopEnabled,
       flip: true,
       playbackRate: true,
       aspectRatio: true,
       fullscreen: true,
       fullscreenWeb: !isMobileDevice,
-      lock: isMobileDevice,
-      gesture: false,
-      fastForward: false,
-      subtitleOffset: true,
-      miniProgressBar: true,
       mutex: true,
       backdrop: true,
       playsInline: true,
-      airplay: !isMobileDevice,
       theme: playbackRef.current.playerThemeColor,
       lang: 'zh-cn',
       moreVideoAttr: {
@@ -265,51 +333,7 @@ export default function UnifiedPlayer() {
     playerRef.current = art
     setActiveArt(art)
 
-    const syncFullscreenMiniProgressBar = () => {
-      const isFullscreenActive = art.fullscreen || art.fullscreenWeb
-      const shouldHideMiniProgress =
-        playbackRef.current.isFullscreenProgressHidden && isFullscreenActive
-      art.template.$player.classList.toggle('oki-hide-mini-progress', shouldHideMiniProgress)
-    }
-
-    const syncMobileControlBar = () => {
-      const isFullscreenActive = art.fullscreen || art.fullscreenWeb
-      const isMobileNow = isTouchDevice()
-      const fullscreenControl = art.controls.fullscreen as HTMLElement | undefined
-      const fullscreenWebControl = art.controls.fullscreenWeb as HTMLElement | undefined
-      const preferredFullscreenControl = fullscreenControl ?? fullscreenWebControl
-      const rightControls = Array.from(
-        art.template.$controlsRight.querySelectorAll<HTMLElement>('.art-control'),
-      )
-
-      if (isMobileNow && !isFullscreenActive) {
-        rightControls.forEach(control => {
-          control.style.display = control === preferredFullscreenControl ? '' : 'none'
-        })
-      } else {
-        rightControls.forEach(control => {
-          control.style.display = ''
-        })
-      }
-      if (preferredFullscreenControl) {
-        preferredFullscreenControl.style.display = ''
-      }
-
-      syncFullscreenMiniProgressBar()
-    }
-
-    const handleControlViewportChange = throttle(() => {
-      syncMobileControlBar()
-    }, 120)
-
-    art.on('fullscreen', syncMobileControlBar)
-    art.on('fullscreenWeb', syncMobileControlBar)
-    window.addEventListener('resize', handleControlViewportChange, { passive: true })
-    window.addEventListener('orientationchange', handleControlViewportChange)
-
     art.on('ready', () => {
-      syncMobileControlBar()
-
       if (art.video) {
         art.video.style.objectFit = 'contain'
         art.video.style.objectPosition = 'center center'
@@ -452,11 +476,6 @@ export default function UnifiedPlayer() {
     return () => {
       miniCleanup?.()
       throttledTimeUpdate.cancel()
-      handleControlViewportChange.cancel()
-      window.removeEventListener('resize', handleControlViewportChange)
-      window.removeEventListener('orientationchange', handleControlViewportChange)
-      art.off('fullscreen', syncMobileControlBar)
-      art.off('fullscreenWeb', syncMobileControlBar)
       addHistorySnapshot()
       setActiveArt(current => (current === art ? null : current))
       art.destroy(false)
@@ -601,15 +620,42 @@ export default function UnifiedPlayer() {
                 : seekPreviewOverlay)}
             {volumeOverlay &&
               (playerOverlayContainer ? createPortal(volumeOverlay, playerOverlayContainer) : volumeOverlay)}
+            {brightnessOverlay &&
+              (playerOverlayContainer
+                ? createPortal(brightnessOverlay, playerOverlayContainer)
+                : brightnessOverlay)}
+
+            {/* 自绘控制条（顶部标题条 + 底部进度条/按钮 + 设置面板） */}
+            {activeArt && playerOverlayContainer && (
+              createPortal(
+                <PlayerControls
+                  art={activeArt}
+                  visible={controlsVisible}
+                  src={detail.episodes[selectedEpisode]}
+                  coverUrl={detail.videoInfo?.cover}
+                  title={title}
+                  sourceName={sourceName}
+                  hasNextEpisode={hasNextEpisode}
+                  onNextEpisode={handleNextEpisode}
+                  onBack={() => navigate(-1)}
+                  isPipEnabled={playback.isPipEnabled}
+                  isLoopEnabled={playback.isLoopEnabled}
+                  onInteractingChange={setInteracting}
+                  settingOpen={settingOpen}
+                  onSettingOpenChange={setSettingOpen}
+                />,
+                playerOverlayContainer,
+              )
+            )}
             {transientNotices.length > 0 && (
               <div className="pointer-events-none absolute top-3 right-3 z-30 flex max-w-[min(78vw,340px)] flex-col items-end gap-2">
                 {transientNotices.map(notice => (
                   <div
                     key={notice.id}
-                    className="pointer-events-auto w-[min(78vw,340px)] overflow-hidden rounded-md border border-white/15 bg-black/65 shadow-lg backdrop-blur-sm"
+                    className="oki-player-overlay pointer-events-auto w-[min(78vw,340px)] overflow-hidden rounded-md border border-primary-foreground/15 bg-black/65 shadow-lg backdrop-blur-sm"
                   >
-                    <div className="px-3 py-1.5 text-xs text-white">{notice.message}</div>
-                    <div className="h-0.5 bg-white/20">
+                    <div className="px-3 py-1.5 text-xs text-primary-foreground">{notice.message}</div>
+                    <div className="h-0.5 bg-primary-foreground/20">
                       <div
                         className="h-full bg-red-500 transition-[width] ease-linear"
                         style={{
@@ -624,7 +670,7 @@ export default function UnifiedPlayer() {
             )}
             {isDetailRefreshing && (
               <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
-                <div className="flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-white">
+                <div className="oki-player-overlay flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-primary-foreground">
                   <Spinner size="sm" />
                   正在切换资源...
                 </div>

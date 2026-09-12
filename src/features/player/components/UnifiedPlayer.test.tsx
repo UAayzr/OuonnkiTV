@@ -76,8 +76,18 @@ vi.mock('@/features/player/hooks', () => ({
     setCurrentPageRange: vi.fn(),
     currentPageEpisodes: [],
   }),
-  usePlayerGestureOverlays: () => ({ gestureVolumeLevel: null, gestureSeekPreviewTime: null }),
+  usePlayerGestureOverlays: () => ({
+    gestureVolumeLevel: null,
+    gestureBrightnessLevel: null,
+    gestureSeekPreviewTime: null,
+  }),
   usePlayerNotices: () => ({ transientNotices: [], showPlayerNotice: vi.fn() }),
+  usePlayerControlsVisibility: () => ({
+    visible: true,
+    showControls: vi.fn(),
+    toggleControls: vi.fn(),
+    setInteracting: vi.fn(),
+  }),
 }))
 
 import UnifiedPlayer from './UnifiedPlayer'

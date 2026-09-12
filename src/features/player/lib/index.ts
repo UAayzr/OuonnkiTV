@@ -1,4 +1,6 @@
 export * from './playerRoute'
 export * from './playerMiniLayout'
-export * from './mobileGesture'
+export * from './playerGestures'
+export * from './playerCore'
 export * from './hlsPlayback'
+export * from './framePreviewer'

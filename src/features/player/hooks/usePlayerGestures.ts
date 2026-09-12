@@ -1,0 +1,456 @@
+import { useEffect, useRef } from 'react'
+import type Artplayer from 'artplayer'
+import { isPlayerControlTarget } from '@/features/player/lib/playerCore'
+import {
+  clampValue,
+  computeBrightnessTarget,
+  computeSeekTarget,
+  computeVolumeTarget,
+  GESTURE_CONFIG,
+  isDoubleTap,
+  isLeftHalf,
+  resolveGestureAxis,
+  type GestureAxis,
+  type TapRecord,
+} from '@/features/player/lib/playerGestures'
+
+/** 触摸抬手后抑制浏览器合成 click 的时间窗（毫秒） */
+const SYNTHETIC_CLICK_SUPPRESS_MS = 400
+/** 长按加速触发时长（毫秒） */
+const LONG_PRESS_DURATION_MS = 380
+const LONG_PRESS_RATE_MIN = 1
+const LONG_PRESS_RATE_MAX = 5
+
+interface GestureSession {
+  touchId: number
+  startX: number
+  startY: number
+  startTime: number
+  startVolume: number
+  startBrightness: number
+  playerWidth: number
+  playerHeight: number
+  axis: GestureAxis
+  /** 垂直手势落位：true = 亮度（左半屏），false = 音量（右半屏） */
+  isBrightness: boolean
+  /** 水平滑动待 seek 的目标时间 */
+  pendingSeekTime: number | null
+  longPressTriggered: boolean
+}
+
+interface UsePlayerGesturesParams {
+  art: Artplayer | null
+  /** 是否启用触屏滑动/长按手势（需全屏；单击与双击始终生效） */
+  swipeGestureEnabled: boolean
+  longPressPlaybackRate: number
+  /** 画面单击（非双击）：用于切换控制条显隐 */
+  onSurfaceTap?: () => void
+  onVolumeGestureChange?: (volume: number) => void
+  onVolumeGestureEnd?: () => void
+  onBrightnessGestureChange?: (brightness: number) => void
+  onBrightnessGestureEnd?: () => void
+  onSeekGesturePreviewChange?: (previewTime: number) => void
+  onSeekGesturePreviewEnd?: () => void
+}
+
+/** 从视频元素当前 filter 解析亮度值（无则默认 1） */
+const readBrightnessFromVideo = (art: Artplayer): number => {
+  const filter = (art.video as HTMLVideoElement).style.filter || ''
+  const match = filter.match(/brightness\(\s*([\d.]+)\s*\)/)
+  if (!match) return 1
+  const parsed = Number.parseFloat(match[1])
+  return Number.isFinite(parsed) ? parsed : 1
+}
+
+const isFullscreenActive = (art: Artplayer): boolean => {
+  const doc = document as Document & { webkitFullscreenElement?: Element | null }
+  const video = art.video as HTMLVideoElement & {
+    webkitDisplayingFullscreen?: boolean
+    webkitPresentationMode?: string
+  }
+
+  return Boolean(
+    art.fullscreenWeb ||
+      art.fullscreen ||
+      doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      video?.webkitDisplayingFullscreen ||
+      video?.webkitPresentationMode === 'fullscreen',
+  )
+}
+
+/**
+ * 统一的画面交互接管层（Artplayer 只当解码内核）。
+ *
+ * 桌面与触屏共用同一套仲裁逻辑：
+ * - 单击 → onSurfaceTap（切换控制条显隐），经双击窗口延迟确认
+ * - 双击 → 播放/暂停
+ * - 右键 → 完全禁用
+ * - 触屏全屏下：水平滑 seek、左半屏上下滑亮度、右半屏上下滑音量、长按加速
+ *
+ * 全部监听注册在捕获阶段，先于 Artplayer 内核（冒泡阶段）的事件代理执行，
+ * 因此能彻底覆盖其"单击 toggle / 双击全屏 / 右键菜单"的默认行为。
+ */
+export function usePlayerGestures({
+  art,
+  swipeGestureEnabled,
+  longPressPlaybackRate,
+  onSurfaceTap,
+  onVolumeGestureChange,
+  onVolumeGestureEnd,
+  onBrightnessGestureChange,
+  onBrightnessGestureEnd,
+  onSeekGesturePreviewChange,
+  onSeekGesturePreviewEnd,
+}: UsePlayerGesturesParams) {
+  const callbacksRef = useRef({
+    onSurfaceTap,
+    onVolumeGestureChange,
+    onVolumeGestureEnd,
+    onBrightnessGestureChange,
+    onBrightnessGestureEnd,
+    onSeekGesturePreviewChange,
+    onSeekGesturePreviewEnd,
+  })
+  callbacksRef.current = {
+    onSurfaceTap,
+    onVolumeGestureChange,
+    onVolumeGestureEnd,
+    onBrightnessGestureChange,
+    onBrightnessGestureEnd,
+    onSeekGesturePreviewChange,
+    onSeekGesturePreviewEnd,
+  }
+
+  useEffect(() => {
+    if (!art) return
+
+    const $player = art.template?.$player
+    if (!$player) return
+
+    const sessionRef: { current: GestureSession | null } = { current: null }
+    let longPressTimer: number | null = null
+    let lastTap: TapRecord | null = null
+    let suppressClickUntil = 0
+    let playbackRateBeforeLongPress = 1
+    let locked = false
+
+    const clearLongPressTimer = () => {
+      if (longPressTimer !== null) {
+        window.clearTimeout(longPressTimer)
+        longPressTimer = null
+      }
+    }
+
+    const restorePlaybackRate = () => {
+      const session = sessionRef.current
+      if (!session?.longPressTriggered) return
+      art.playbackRate = clampValue(playbackRateBeforeLongPress, 0.1, 16)
+      session.longPressTriggered = false
+    }
+
+    const suppressFollowupClicks = (durationMs: number) => {
+      suppressClickUntil = Date.now() + durationMs
+    }
+
+    const resetSession = () => {
+      const session = sessionRef.current
+      if (session?.axis === 'vertical') {
+        if (session.isBrightness) {
+          callbacksRef.current.onBrightnessGestureEnd?.()
+        } else {
+          callbacksRef.current.onVolumeGestureEnd?.()
+        }
+      }
+      if (session?.axis === 'horizontal') {
+        callbacksRef.current.onSeekGesturePreviewEnd?.()
+      }
+      clearLongPressTimer()
+      restorePlaybackRate()
+      sessionRef.current = null
+    }
+
+    const canSwipe = () =>
+      swipeGestureEnabled && isFullscreenActive(art) && !locked && !art.isLock
+
+    const toLocal = (clientX: number, clientY: number) => {
+      const rect = $player.getBoundingClientRect()
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+        width: rect.width,
+        height: rect.height,
+      }
+    }
+
+    /**
+     * 单击/双击仲裁（桌面 click 与触屏 touchend 共用）。
+     *
+     * 单击**立即生效**：控制条显隐是高频操作，若等双击窗口结束才执行会明显迟钝。
+     * 双击时即便单击已切换过控制条也无副作用——暂停事件本身会让控制条回到显示态。
+     */
+    const handleTap = (x: number, y: number) => {
+      const now = Date.now()
+
+      if (
+        isDoubleTap(
+          lastTap,
+          x,
+          y,
+          now,
+          GESTURE_CONFIG.doubleTapWindowMs,
+          GESTURE_CONFIG.doubleTapMoveTolerancePx,
+        )
+      ) {
+        lastTap = null
+        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+        art.toggle()
+        return
+      }
+
+      lastTap = { x, y, timestamp: now }
+      callbacksRef.current.onSurfaceTap?.()
+    }
+
+    // ---------- 鼠标 / 通用点击 ----------
+
+    const onClickCapture = (event: MouseEvent) => {
+      if (isPlayerControlTarget(event.target)) return
+      event.preventDefault()
+      event.stopPropagation()
+
+      // 触屏抬手已自行处理（含合成 click），此处仅抑制
+      if (Date.now() <= suppressClickUntil) return
+
+      const { x, y } = toLocal(event.clientX, event.clientY)
+      handleTap(x, y)
+    }
+
+    const onDblClickCapture = (event: MouseEvent) => {
+      if (isPlayerControlTarget(event.target)) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (Date.now() <= suppressClickUntil) return
+      lastTap = null
+      suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+      art.toggle()
+    }
+
+    const onContextMenuCapture = (event: MouseEvent) => {
+      // Artplayer 内置右键菜单整体禁用
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    // ---------- 触屏手势 ----------
+
+    const findTrackedTouch = (event: TouchEvent): Touch | null => {
+      const session = sessionRef.current
+      if (!session) return null
+      for (let index = 0; index < event.changedTouches.length; index += 1) {
+        const touch = event.changedTouches.item(index)
+        if (touch?.identifier === session.touchId) return touch
+      }
+      return null
+    }
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (sessionRef.current) return
+      if (isPlayerControlTarget(event.target)) return
+      // 多指（缩放等）不参与手势
+      if (event.touches.length > 1) return
+
+      const touch = event.changedTouches.item(0)
+      if (!touch) return
+
+      const { x, y, width, height } = toLocal(touch.clientX, touch.clientY)
+
+      sessionRef.current = {
+        touchId: touch.identifier,
+        startX: x,
+        startY: y,
+        startTime: art.currentTime || 0,
+        startVolume: art.video.volume,
+        startBrightness: readBrightnessFromVideo(art),
+        playerWidth: width,
+        playerHeight: height,
+        axis: null,
+        isBrightness: false,
+        pendingSeekTime: null,
+        longPressTriggered: false,
+      }
+
+      if (!canSwipe()) return
+
+      playbackRateBeforeLongPress = art.playbackRate || 1
+      clearLongPressTimer()
+      longPressTimer = window.setTimeout(() => {
+        const session = sessionRef.current
+        if (!session || session.touchId !== touch.identifier) return
+        if (session.axis !== null) return
+        if (!canSwipe()) return
+
+        session.longPressTriggered = true
+        art.playbackRate = clampValue(
+          longPressPlaybackRate,
+          LONG_PRESS_RATE_MIN,
+          LONG_PRESS_RATE_MAX,
+        )
+      }, LONG_PRESS_DURATION_MS)
+    }
+
+    const onTouchMove = (event: TouchEvent) => {
+      const session = sessionRef.current
+      if (!session) return
+
+      const touch = findTrackedTouch(event)
+      if (!touch) return
+
+      const { x, y } = toLocal(touch.clientX, touch.clientY)
+      const deltaX = x - session.startX
+      const deltaY = y - session.startY
+
+      if (session.axis === null) {
+        const axis = resolveGestureAxis(deltaX, deltaY, GESTURE_CONFIG.axisLockThresholdPx)
+        if (!axis) return
+
+        // 已确认是滑动，抑制浏览器随后可能补发的合成 click
+        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+
+        // 非全屏（或未开启手势）时交还浏览器：页面滚动/正常触摸行为
+        if (!canSwipe()) {
+          resetSession()
+          return
+        }
+
+        session.axis = axis
+        if (axis === 'vertical') {
+          session.isBrightness = isLeftHalf(session.startX, session.playerWidth)
+        }
+        clearLongPressTimer()
+      }
+
+      if (session.axis === 'horizontal') {
+        const previewTime = computeSeekTarget(
+          session.startTime,
+          deltaX,
+          session.playerWidth,
+          art.duration,
+        )
+        session.pendingSeekTime = previewTime
+        callbacksRef.current.onSeekGesturePreviewChange?.(previewTime)
+        if (event.cancelable) event.preventDefault()
+        return
+      }
+
+      if (session.axis === 'vertical') {
+        if (session.isBrightness) {
+          const nextBrightness = computeBrightnessTarget(
+            session.startBrightness,
+            deltaY,
+            session.playerHeight,
+          )
+          callbacksRef.current.onBrightnessGestureChange?.(nextBrightness)
+        } else {
+          const nextVolume = computeVolumeTarget(
+            session.startVolume,
+            deltaY,
+            session.playerHeight,
+          )
+          if (Math.abs(nextVolume - art.video.volume) >= 0.005) {
+            art.video.volume = nextVolume
+            if (nextVolume > 0 && art.video.muted) {
+              art.video.muted = false
+            }
+          }
+          callbacksRef.current.onVolumeGestureChange?.(nextVolume)
+        }
+        if (event.cancelable) event.preventDefault()
+      }
+    }
+
+    const onTouchEnd = (event: TouchEvent) => {
+      const session = sessionRef.current
+      if (!session) return
+
+      const touch = findTrackedTouch(event)
+      if (!touch) return
+
+      clearLongPressTimer()
+
+      // 长按加速：仅恢复倍速
+      if (session.longPressTriggered) {
+        restorePlaybackRate()
+        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+        sessionRef.current = null
+        return
+      }
+
+      // 水平滑动结束 → 执行 seek
+      if (session.axis === 'horizontal') {
+        if (session.pendingSeekTime !== null) {
+          art.seek = session.pendingSeekTime
+        }
+        callbacksRef.current.onSeekGesturePreviewEnd?.()
+        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+        sessionRef.current = null
+        return
+      }
+
+      if (session.axis === 'vertical') {
+        if (session.isBrightness) {
+          callbacksRef.current.onBrightnessGestureEnd?.()
+        } else {
+          callbacksRef.current.onVolumeGestureEnd?.()
+        }
+        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+        sessionRef.current = null
+        return
+      }
+
+      // 无滑动 → 轻点/双击（自行判定，不依赖浏览器合成 dblclick）
+      const { x, y } = toLocal(touch.clientX, touch.clientY)
+      const insideDoubleTapZone =
+        Math.abs(x - session.startX) <= GESTURE_CONFIG.doubleTapMoveTolerancePx &&
+        Math.abs(y - session.startY) <= GESTURE_CONFIG.doubleTapMoveTolerancePx
+
+      sessionRef.current = null
+      if (!insideDoubleTapZone) return
+
+      if (event.cancelable) event.preventDefault()
+      // 抬手后浏览器仍会补发合成 click，必须抑制，否则会清掉待定的单击
+      suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+      handleTap(x, y)
+    }
+
+    const onTouchCancel = () => {
+      resetSession()
+    }
+
+    const onLockChange = (state: boolean) => {
+      locked = state
+      if (state) resetSession()
+    }
+
+    $player.addEventListener('click', onClickCapture, true)
+    $player.addEventListener('dblclick', onDblClickCapture, true)
+    $player.addEventListener('contextmenu', onContextMenuCapture, true)
+    $player.addEventListener('touchstart', onTouchStart, { passive: true })
+    $player.addEventListener('touchmove', onTouchMove, { passive: false })
+    $player.addEventListener('touchend', onTouchEnd)
+    $player.addEventListener('touchcancel', onTouchCancel)
+    art.on('lock', onLockChange)
+
+    return () => {
+      resetSession()
+      $player.removeEventListener('click', onClickCapture, true)
+      $player.removeEventListener('dblclick', onDblClickCapture, true)
+      $player.removeEventListener('contextmenu', onContextMenuCapture, true)
+      $player.removeEventListener('touchstart', onTouchStart)
+      $player.removeEventListener('touchmove', onTouchMove)
+      $player.removeEventListener('touchend', onTouchEnd)
+      $player.removeEventListener('touchcancel', onTouchCancel)
+      art.off('lock', onLockChange)
+    }
+  }, [art, swipeGestureEnabled, longPressPlaybackRate])
+}

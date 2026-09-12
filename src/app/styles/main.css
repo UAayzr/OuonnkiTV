@@ -814,8 +814,88 @@ html.dark.theme-lavender {
   height: 50% !important;
 }
 
-/* 全屏场景下按设置隐藏 Artplayer 收起态迷你进度条 */
-.art-video-player.oki-hide-mini-progress.art-mini-progress-bar .art-bottom .art-progress,
-.art-video-player.oki-hide-mini-progress.art-lock .art-bottom .art-progress {
+/* 自绘播放器设置面板弹出动画 */
+@keyframes settings-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 自绘控制条接管播放器交互：隐藏 Artplayer 默认控制条 */
+.art-video-player .art-controls {
   display: none !important;
+}
+
+/*
+ * progress / thumbnails 是 position:"top" 的内置控件，挂在 .art-bottom 顶部而非
+ * .art-controls 内，隐藏默认控制条时不会一并消失（默认进度条会残留在自绘控制条上方）。
+ */
+.art-video-player .art-progress,
+.art-video-player .art-thumbnails {
+  display: none !important;
+}
+
+/*
+ * Artplayer 内置的 `.art-video-player svg{fill:var(--art-font-color)}` 会命中
+ * portal 到 $player 内的自绘控制条与手势叠加层，把 lucide 图标（靠 fill="none"
+ * 表现属性描边）填充成实心块，这里恢复描边风格。
+ *
+ * 直接以自绘容器的类名定位（.oki-player-controls / .oki-player-overlay），
+ * 不依赖运行时添加的标记类，避免标记缺失时整条规则失效。
+ */
+.art-video-player .oki-player-controls svg,
+.art-video-player .oki-player-overlay svg,
+.oki-bare-player svg {
+  fill: none !important;
+}
+
+/*
+ * 激活态且标记了 solidIcon 的控制按钮（目前只有设置按钮）：图标转为实心填充，
+ * 与面板可见状态呼应。上面那条也是 !important，冲突时由特异性决胜——此处 (0,2,2) 高于其 (0,2,1)。
+ *
+ * 只在结构简单的图标上启用：lucide 图标多为「闭合轮廓 + 开放路径」，
+ * 把带开放路径的图标（喇叭的声波弧、箭头等）填充会变形。
+ *
+ * 中心用 mask 挖一个孔：lucide 图标是「轮廓 path + 独立中心圆」，直接整体 fill 会把
+ * 中心一并填满、糊成一个实心圆盘，观感很差。挖孔半径按 lucide 原始设计的中心圆
+ * （circle r=3 / viewBox 24）在 size-5(20px) 下换算，约 2.5px。
+ */
+.oki-player-controls button[data-solid-icon='true'] svg {
+  fill: currentColor !important;
+  -webkit-mask-image: radial-gradient(circle at center, transparent 2.5px, #000 3px);
+  mask-image: radial-gradient(circle at center, transparent 2.5px, #000 3px);
+}
+
+/* 裸内核：隐藏 Artplayer 内置信息层与右键菜单（交互已由 usePlayerGestures 接管） */
+.art-video-player .art-info,
+.art-video-player .art-contextmenu,
+.art-video-player .art-contextmenus,
+.art-video-player .art-notice {
+  display: none !important;
+}
+
+/* 裸内核禁止浏览器双击缩放/长按菜单，保证自绘双击与长按手势可靠 */
+.art-video-player {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/*
+ * 播放器 UI 的浅色前景：把纯白换成「主题色 + 白」的浅色调，
+ * 让控制条、面板、手势叠加层整体带上一层主题色调。
+ *
+ * 这里在播放器范围内重定义 --primary-foreground，是因为主题里配的
+ * primary-foreground 色度极低（如 oklch(0.99 0.008 12)）几乎等同纯白，
+ * 直接用它看不出与白色的区别。深色视频上需要的是"亮且有色相"的浅色。
+ */
+.oki-player-controls,
+.oki-player-overlay {
+  --primary-foreground: color-mix(in oklab, var(--primary) 20%, white);
 }
