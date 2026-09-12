@@ -128,6 +128,24 @@ export function usePlayerGestures({
       suppressClickUntil = Date.now() + durationMs
     }
 
+    /**
+     * 切换播放/暂停。
+     *
+     * 不用 `art.toggle()`：它内部以 `art.playing` 判定，而 `art.playing` 带一个
+     * `currentTime > 0` 条件，起播瞬间（已在播放但 currentTime 仍为 0）会误判成
+     * 未播放，于是"暂停"变成再调一次 play()，这一下就被吞掉。以 video.paused 为准。
+     */
+    const togglePlayback = () => {
+      const video = art.video as HTMLVideoElement
+      if (video.paused) {
+        art.play().catch(() => {
+          // 起播被后续操作打断时 play() 会以 AbortError 拒绝，属预期情况
+        })
+        return
+      }
+      art.pause()
+    }
+
     const resetSession = () => {
       if (sessionRef.current?.axis === 'horizontal') {
         callbacksRef.current.onSeekGesturePreviewEnd?.()
@@ -170,7 +188,7 @@ export function usePlayerGestures({
       ) {
         lastTap = null
         suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
-        art.toggle()
+        togglePlayback()
         return
       }
 
@@ -199,7 +217,7 @@ export function usePlayerGestures({
       if (Date.now() <= suppressClickUntil) return
       lastTap = null
       suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
-      art.toggle()
+      togglePlayback()
     }
 
     const onContextMenuCapture = (event: MouseEvent) => {

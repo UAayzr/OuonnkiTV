@@ -87,7 +87,14 @@ export function usePlayerState(art: Artplayer | null): PlayerUiState {
       currentTime: art.currentTime || 0,
       duration: art.duration || 0,
       bufferedRanges: readBufferedRanges(video),
-      playing: art.playing,
+      /*
+       * 不用 art.playing：它的实现是
+       *   video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2
+       * 多出的 `currentTime > 0` 会让"刚点播放、还没走够一帧"的瞬间判成未播放。
+       * 该瞬间若正好是最后一次状态刷新，播放按钮的图标就会一直停在"播放"。
+       * video.paused 是权威来源，不受此影响。
+       */
+      playing: video ? !video.paused : false,
       volume: video?.volume ?? 1,
       muted: video?.muted ?? false,
       playbackRate: art.playbackRate || 1,
@@ -120,7 +127,11 @@ export function usePlayerState(art: Artplayer | null): PlayerUiState {
     art.on('video:loadedmetadata', apply)
     art.on('video:seeked', apply)
     art.on('video:play', apply)
+    // playing：缓冲结束后真正开始出画时才派发，起播卡在 currentTime=0 的那段时间靠它兜回来
+    art.on('video:playing', apply)
     art.on('video:pause', apply)
+    // ended：播完不会派发 pause，缺了它按钮会停在"暂停"
+    art.on('video:ended', apply)
     art.on('video:volumechange', apply)
     // ratechange：倍速写入后 video 会派发该事件，缺了它倍速 UI 不会刷新
     //（表现为"调了没反应，要等别的事件顺带刷新"），循环倍速按钮也会因此算错下一个值
@@ -143,7 +154,9 @@ export function usePlayerState(art: Artplayer | null): PlayerUiState {
       art.off('video:loadedmetadata', apply)
       art.off('video:seeked', apply)
       art.off('video:play', apply)
+      art.off('video:playing', apply)
       art.off('video:pause', apply)
+      art.off('video:ended', apply)
       art.off('video:volumechange', apply)
       art.off('video:ratechange', apply)
       art.off('video:error', onError)

@@ -26,7 +26,10 @@ interface FakeArt {
   art: Artplayer
   $player: HTMLDivElement
   video: HTMLVideoElement
-  toggle: ReturnType<typeof vi.fn>
+  play: ReturnType<typeof vi.fn>
+  pause: ReturnType<typeof vi.fn>
+  /** 直接摆布 video.paused（jsdom 里是原型 getter，需自行接管） */
+  setPaused: (paused: boolean) => void
   emit: (name: string, payload?: unknown) => void
 }
 
@@ -36,21 +39,30 @@ const createFakeArt = (options: { fullscreen?: boolean } = {}): FakeArt => {
   $player.appendChild(video)
   document.body.appendChild($player)
 
+  let paused = true
+  Object.defineProperty(video, 'paused', { get: () => paused, configurable: true })
+
   const listeners = new Map<string, Set<(payload: unknown) => void>>()
-  const toggle = vi.fn()
+  const play = vi.fn(() => {
+    paused = false
+    return Promise.resolve()
+  })
+  const pause = vi.fn(() => {
+    paused = true
+  })
 
   const art = {
     template: { $player },
     video,
     currentTime: 0,
     duration: 120,
-    playing: false,
     playbackRate: 1,
     fullscreen: options.fullscreen ?? false,
     fullscreenWeb: false,
     isLock: false,
     seek: 0,
-    toggle,
+    play,
+    pause,
     on: (name: string, handler: (payload: unknown) => void) => {
       if (!listeners.has(name)) listeners.set(name, new Set())
       listeners.get(name)?.add(handler)
@@ -64,7 +76,11 @@ const createFakeArt = (options: { fullscreen?: boolean } = {}): FakeArt => {
     art,
     $player,
     video,
-    toggle,
+    play,
+    pause,
+    setPaused: (value: boolean) => {
+      paused = value
+    },
     emit: (name, payload) => listeners.get(name)?.forEach(handler => handler(payload)),
   }
 }
@@ -73,6 +89,7 @@ const renderGestures = (options: {
   art: Artplayer
   onSurfaceTap?: () => void
   onSeekGesturePreviewChange?: (time: number) => void
+  onSeekGesturePreviewEnd?: () => void
   onLongPressRateChange?: (rate: number | null) => void
   swipeGestureEnabled?: boolean
 }) => {
@@ -83,6 +100,7 @@ const renderGestures = (options: {
       longPressPlaybackRate: 2,
       onSurfaceTap: options.onSurfaceTap,
       onSeekGesturePreviewChange: options.onSeekGesturePreviewChange,
+      onSeekGesturePreviewEnd: options.onSeekGesturePreviewEnd,
       onLongPressRateChange: options.onLongPressRateChange,
     }),
   )
@@ -111,7 +129,7 @@ describe('usePlayerGestures', () => {
   })
 
   it('双击触发播放/暂停，且只切换一次', () => {
-    const { art, video, toggle } = createFakeArt()
+    const { art, video, play } = createFakeArt()
     renderGestures({ art })
 
     act(() => {
@@ -120,8 +138,22 @@ describe('usePlayerGestures', () => {
       video.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: 10, clientY: 10 }))
     })
 
-    // 第二次 click 判定为双击 → toggle；随后的 dblclick 被抑制，不重复触发
-    expect(toggle).toHaveBeenCalledTimes(1)
+    // 第二次 click 判定为双击 → 播放；随后的 dblclick 被抑制，不重复触发
+    expect(play).toHaveBeenCalledTimes(1)
+  })
+
+  it('已在播放时双击走暂停（不依赖 art.playing 的 currentTime>0 判定）', () => {
+    const { art, video, play, pause, setPaused } = createFakeArt()
+    setPaused(false) // 已在播放，但 currentTime 仍为 0——正是起播瞬间的形态
+    renderGestures({ art })
+
+    act(() => {
+      video.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }))
+      video.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }))
+    })
+
+    expect(pause).toHaveBeenCalledTimes(1)
+    expect(play).not.toHaveBeenCalled()
   })
 
   it('控制条区域内的点击不被画面手势接管', () => {
@@ -155,7 +187,7 @@ describe('usePlayerGestures', () => {
   })
 
   it('触屏轻点两次触发播放/暂停（自行仲裁，不依赖浏览器 dblclick）', () => {
-    const { art, $player, toggle } = createFakeArt()
+    const { art, $player, play } = createFakeArt()
     renderGestures({ art })
 
     act(() => {
@@ -166,7 +198,7 @@ describe('usePlayerGestures', () => {
       $player.dispatchEvent(makeTouchEvent('touchend', [touch]))
     })
 
-    expect(toggle).toHaveBeenCalledTimes(1)
+    expect(play).toHaveBeenCalledTimes(1)
   })
 
   it('触屏单次轻点立即触发 onSurfaceTap', () => {

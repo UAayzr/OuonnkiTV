@@ -383,6 +383,21 @@ export function PlayerControls({
     art.seek = time
   }
 
+  /*
+   * 不用 art.toggle()：它内部以 art.playing 判定，而后者带 `currentTime > 0` 条件，
+   * 起播瞬间（已在播放但 currentTime 仍为 0）会把"暂停"误判成"播放"而吞掉这一下。
+   * 以 state.playing（来自 video.paused）为准。
+   */
+  const togglePlayback = () => {
+    if (state.playing) {
+      art.pause()
+      return
+    }
+    art.play().catch(() => {
+      // 起播被后续操作打断时 play() 会以 AbortError 拒绝，属预期情况
+    })
+  }
+
   const toggleFullscreen = () => {
     if (isMobile) {
       art.fullscreen = !art.fullscreen
@@ -457,7 +472,7 @@ export function PlayerControls({
           </div>
 
           <div className="pointer-events-auto mt-1 flex items-center gap-0.5">
-          <ControlButton label={state.playing ? '暂停' : '播放'} onClick={() => art.toggle()}>
+          <ControlButton label={state.playing ? '暂停' : '播放'} onClick={togglePlayback}>
             {state.playing ? <Pause className="size-5" /> : <Play className="size-5" />}
           </ControlButton>
 
