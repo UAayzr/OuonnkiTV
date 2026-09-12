@@ -285,4 +285,37 @@ describe('usePlayerGestures', () => {
     expect(onLongPressRateChange).toHaveBeenLastCalledWith(null)
     expect(art.playbackRate).toBe(1)
   })
+
+  it('长按后继续横向拖动再抬手：seek 生效且预览收尾（不残留在屏幕上）', () => {
+    const { art, $player } = createFakeArt({ fullscreen: true })
+    const onSeekGesturePreviewChange = vi.fn()
+    const onSeekGesturePreviewEnd = vi.fn()
+    renderGestures({
+      art,
+      swipeGestureEnabled: true,
+      onSeekGesturePreviewChange,
+      onSeekGesturePreviewEnd,
+    })
+
+    act(() => {
+      const start = { clientX: 50, clientY: 50, identifier: 1 }
+      $player.dispatchEvent(makeTouchEvent('touchstart', [start]))
+
+      // 先长按到触发 2 倍速，此时 axis 仍是 null
+      vi.advanceTimersByTime(500)
+      expect(art.playbackRate).toBe(2)
+
+      // 不抬手，继续横向拖动 → axis 这时才锁成 horizontal，预览出现
+      const moved = { clientX: 190, clientY: 52, identifier: 1 }
+      $player.dispatchEvent(makeTouchEvent('touchmove', [moved]))
+      $player.dispatchEvent(makeTouchEvent('touchend', [moved]))
+    })
+
+    expect(onSeekGesturePreviewChange).toHaveBeenCalled()
+    // 若长按分支抢先 return，这两个断言都会失败：
+    expect(onSeekGesturePreviewEnd).toHaveBeenCalled()
+    expect(art.seek).toBe(120)
+    // 抬手同时结束加速
+    expect(art.playbackRate).toBe(1)
+  })
 })

@@ -332,22 +332,28 @@ export function usePlayerGestures({
 
       clearLongPressTimer()
 
-      // 长按加速：仅恢复倍速
-      if (session.longPressTriggered) {
-        restorePlaybackRate()
-        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
-        sessionRef.current = null
-        return
-      }
-
-      // 水平滑动结束 → 执行 seek
+      /*
+       * 横向分支必须排在长按分支之前。
+       *
+       * 长按触发后用户仍可能继续横向拖动（axis 会在长按之后才锁成 horizontal），
+       * 此时预览已经显示了目标时间。若让长按分支先 return：
+       *   1. 这一下 seek 被丢掉——预览显示了目标时间却什么也没发生；
+       *   2. onSeekGesturePreviewEnd 不会被调用，预览会永远停在屏幕中央。
+       * 统一走 resetSession 收尾：清预览、恢复长按倍速、清会话。
+       */
       if (session.axis === 'horizontal') {
         if (session.pendingSeekTime !== null) {
           art.seek = session.pendingSeekTime
         }
-        callbacksRef.current.onSeekGesturePreviewEnd?.()
         suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
-        sessionRef.current = null
+        resetSession()
+        return
+      }
+
+      // 纯长按（未滑动）：恢复倍速即可
+      if (session.longPressTriggered) {
+        suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
+        resetSession()
         return
       }
 
