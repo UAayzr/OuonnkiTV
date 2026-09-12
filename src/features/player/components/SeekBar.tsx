@@ -142,6 +142,13 @@ export function SeekBar({
     if (!container) return
     container.replaceChildren()
     if (previewFrame) {
+      /*
+       * canvas 的固有尺寸是视频原始分辨率（常见 1280×720 乃至 1920×1080），
+       * 而这里的槽位只有 80×144。不显式约束 CSS 尺寸，canvas 就会按固有尺寸渲染，
+       * 被外层 overflow-hidden 裁成画面正中极小的一块（表现为"预览只显示局部"）。
+       * object-contain：完整放下整帧，仅在与槽位比例不符时留少量黑边。
+       */
+      previewFrame.className = 'h-full w-full object-contain'
       container.appendChild(previewFrame)
     }
   }, [previewFrame])
@@ -319,7 +326,19 @@ export function SeekBar({
           style={{ left: `${bubblePct}%` }}
         >
           <div className="overflow-hidden rounded-md border border-primary-foreground/15 bg-black/80 shadow-xl">
-            <div ref={frameContainerRef} className="flex h-20 w-36 items-center justify-center" />
+            {/*
+              真帧槽位与下面的占位块必须是兄弟节点：canvas 由 effect 用 replaceChildren
+              注入，占位块若放进槽位内部会被一并清掉。
+              没有帧时槽位要塌成 0 高度——否则两个 80px 的块会竖着叠成 160px，
+              气泡先是"竖版方框"，等抓帧完成占位块卸载才跳回横版。
+            */}
+            <div
+              ref={frameContainerRef}
+              className={cn(
+                'flex items-center justify-center',
+                previewFrame ? 'h-20 w-36' : 'h-0 w-0',
+              )}
+            />
             {!previewFrame && (
               <div className="flex h-20 w-36 items-center justify-center">
                 {coverUrl ? (
