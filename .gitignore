@@ -40,5 +40,11 @@ dist-ssr
 # Codex
 /.codex
 
+# Playwright MCP（浏览器实测产物）
+/.playwright-mcp
+
+# 本地调试截图
+/review-player-controls.png
+
 # TypeScript build info
 *.tsbuildinfo
