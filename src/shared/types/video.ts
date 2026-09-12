@@ -22,15 +22,3 @@ export interface ViewingHistoryItem {
   playbackPosition: number
   duration: number
 }
-
-// 扩展的 VideoApi 类型（用于需要 updatedAt 必填的场景）
-export interface VideoApiWithDate {
-  id: string
-  name: string
-  url: string
-  detailUrl?: string
-  timeout?: number
-  retry?: number
-  isEnabled: boolean
-  updatedAt: Date
-}

@@ -5,15 +5,8 @@ import { buildProxyRequestUrl } from '@/shared/config/api.config'
 import { useSettingStore } from '@/shared/store/settingStore'
 import { useHealthStore, type HealthResult } from '@/shared/store/healthStore'
 
-const DEFAULT_RESULT: HealthResult = {
-  status: 'idle',
-  latency: null,
-  errorMessage: null,
-  checkedAt: null,
-}
-
 /** 进度回调 */
-export type OnProgressCallback = (completed: number, total: number) => void
+type OnProgressCallback = (completed: number, total: number) => void
 
 /**
  * 视频源测速 — 按网络设置决定是否走代理，记录响应时间。
@@ -192,14 +185,4 @@ export async function batchCheckSubscriptions(
   )
 
   await Promise.allSettled(tasks)
-}
-
-/** 单个视频源测速 */
-export async function checkSingleVideoSource(source: VideoSource): Promise<void> {
-  useHealthStore.getState().setResult(source.id, {
-    ...DEFAULT_RESULT,
-    status: 'testing',
-  })
-  const result = await checkVideoSource(source)
-  useHealthStore.getState().setResult(source.id, result)
 }

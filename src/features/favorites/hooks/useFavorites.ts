@@ -163,25 +163,3 @@ export const useFavorites = () => {
     groupByStatus,
   }
 }
-
-/**
- * 简化版 Hook - 仅获取收藏状态和切换方法
- * 适用于组件中简单的收藏按钮
- */
-export const useFavoriteToggle = () => {
-  const isCmsFavorited = useFavoritesStore(state => state.isCmsFavorited)
-  const toggleCmsFavorite = useFavoritesStore(state => state.toggleCmsFavorite)
-
-  const isFavorited = (item: VideoItem): boolean => {
-    return isCmsFavorited(item.vod_id, item.source_code || '')
-  }
-
-  const toggleFavorite = (item: VideoItem): void => {
-    toggleCmsFavorite(item)
-  }
-
-  return {
-    isFavorited,
-    toggleFavorite,
-  }
-}

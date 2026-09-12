@@ -1,28 +1,5 @@
-// API 配置
-export const DEFAULT_USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-
-export const API_CONFIG = {
-  search: {
-    path: '/api.php/provide/vod/?ac=videolist&wd=',
-    headers: {
-      'User-Agent': DEFAULT_USER_AGENT,
-      Accept: 'application/json',
-    },
-  },
-  detail: {
-    path: '/api.php/provide/vod/?ac=videolist&ids=',
-    headers: {
-      'User-Agent': DEFAULT_USER_AGENT,
-      Accept: 'application/json',
-    },
-  },
-}
-
 // 代理地址前缀（可在设置页被覆盖）
-export const DEFAULT_PROXY_URL = '/proxy?url='
-export const PROXY_URL = DEFAULT_PROXY_URL
-export const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g
+const DEFAULT_PROXY_URL = '/proxy?url='
 
 export const normalizeProxyPrefix = (proxyUrl?: string | null): string => {
   const value = typeof proxyUrl === 'string' ? proxyUrl.trim() : ''
