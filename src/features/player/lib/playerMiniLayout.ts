@@ -1,3 +1,5 @@
+import { clampValue } from './playerUtils'
+
 interface ComputeMiniPlayerRectParams {
   viewportWidth: number
   viewportHeight: number
@@ -7,7 +9,7 @@ interface ComputeMiniPlayerRectParams {
   isTablet: boolean
 }
 
-export interface MiniPlayerRect {
+interface MiniPlayerRect {
   width: number
   height: number
   top: number
@@ -15,8 +17,6 @@ export interface MiniPlayerRect {
 }
 
 const EDGE_GAP = 8
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
 export function computeMiniPlayerRect(params: ComputeMiniPlayerRectParams): MiniPlayerRect {
   const safeViewportWidth = Math.max(1, params.viewportWidth)
@@ -34,8 +34,8 @@ export function computeMiniPlayerRect(params: ComputeMiniPlayerRectParams): Mini
     ? safeViewportWidth - width - (params.isMobile ? 12 : 16)
     : safeViewportWidth - width - 50
 
-  const top = clamp(rawTop, EDGE_GAP, Math.max(EDGE_GAP, safeViewportHeight - height - EDGE_GAP))
-  const left = clamp(rawLeft, EDGE_GAP, Math.max(EDGE_GAP, safeViewportWidth - width - EDGE_GAP))
+  const top = clampValue(rawTop, EDGE_GAP, Math.max(EDGE_GAP, safeViewportHeight - height - EDGE_GAP))
+  const left = clampValue(rawLeft, EDGE_GAP, Math.max(EDGE_GAP, safeViewportWidth - width - EDGE_GAP))
 
   return {
     width,

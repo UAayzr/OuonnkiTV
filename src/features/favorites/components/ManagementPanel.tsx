@@ -14,7 +14,7 @@ import {
 } from '@/shared/components/ui/alert-dialog'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
 
-export interface ManagementPanelProps {
+interface ManagementPanelProps {
   isOpen: boolean
   selectedCount: number
   totalCount: number

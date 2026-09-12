@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type Artplayer from 'artplayer'
 import { BRIGHTNESS } from '@/features/player/lib/playerGestures'
-
-const clampBrightness = (value: number): number =>
-  Math.min(BRIGHTNESS.max, Math.max(BRIGHTNESS.min, value))
+import { clampValue } from '@/features/player/lib/playerUtils'
 
 /**
  * 亮度控制：通过 CSS filter: brightness() 作用于视频元素。
@@ -25,7 +23,7 @@ export function useBrightness(art: Artplayer | null) {
   }, [art, brightness])
 
   const applyBrightness = useCallback((value: number) => {
-    setBrightness(clampBrightness(value))
+    setBrightness(clampValue(value, BRIGHTNESS.min, BRIGHTNESS.max))
   }, [])
 
   const resetBrightness = useCallback(() => {

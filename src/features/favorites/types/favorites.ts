@@ -1,5 +1,5 @@
 /** 收藏项数据来源类型 */
-export type FavoriteSourceType = 'cms'
+type FavoriteSourceType = 'cms'
 
 /**
  * 收藏项观看状态

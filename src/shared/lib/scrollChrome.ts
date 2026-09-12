@@ -1,6 +1,6 @@
 export type ScrollChromeDirection = 'up' | 'down' | 'none'
 
-export interface ScrollChromeTransitionInput {
+interface ScrollChromeTransitionInput {
   currentScrollTop: number
   lastScrollTop: number
   anchorScrollTop: number
@@ -11,7 +11,7 @@ export interface ScrollChromeTransitionInput {
   topRevealOffset?: number
 }
 
-export interface ScrollChromeTransitionOutput {
+interface ScrollChromeTransitionOutput {
   nextIsChromeVisible: boolean
   nextDirection: ScrollChromeDirection
   nextAnchorScrollTop: number

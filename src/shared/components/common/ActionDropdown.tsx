@@ -14,7 +14,7 @@ import { Button } from '@/shared/components/ui/button'
 import { type ReactNode } from 'react'
 import { cn } from '@/shared/lib'
 
-export interface DropdownItem {
+interface DropdownItem {
   label: string
   onClick?: () => void
   type?: 'item' | 'sub'

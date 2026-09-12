@@ -305,4 +305,3 @@ export default function SearchBox({ onMobileSearchChange }: SearchBoxProps) {
 }
 
 export { SearchBox }
-export type { SearchBoxProps }

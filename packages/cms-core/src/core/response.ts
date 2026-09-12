@@ -1,4 +1,4 @@
-export interface JsonResponseResult<T = unknown> {
+interface JsonResponseResult<T = unknown> {
   data: T | null
   error: string | null
 }

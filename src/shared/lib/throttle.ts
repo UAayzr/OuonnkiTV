@@ -1,4 +1,4 @@
-export interface ThrottledFunction<TArgs extends unknown[]> {
+interface ThrottledFunction<TArgs extends unknown[]> {
   (...args: TArgs): void
   cancel: () => void
 }

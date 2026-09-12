@@ -3,7 +3,7 @@ import type { FavoriteFilterOptions } from '../types/favorites'
 type FavoriteSortBy = NonNullable<FavoriteFilterOptions['sortBy']>
 type FavoriteSortOrder = NonNullable<FavoriteFilterOptions['sortOrder']>
 
-export interface FavoriteSortOption {
+interface FavoriteSortOption {
   value: string
   label: string
   sortBy: FavoriteSortBy

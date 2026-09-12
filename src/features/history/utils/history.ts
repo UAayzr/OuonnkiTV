@@ -20,7 +20,7 @@ export const HISTORY_SECTION_BADGE_CLASS_MAP: Record<HistorySectionKey, string> 
 
 export const getHistoryItemKey = (item: ViewingHistoryItem) => getSharedHistoryItemKey(item)
 
-export const getHistorySectionKey = (timestamp: number): HistorySectionKey => {
+const getHistorySectionKey = (timestamp: number): HistorySectionKey => {
   const target = dayjs(timestamp)
   const todayStart = dayjs().startOf('day')
   const yesterdayStart = dayjs().subtract(1, 'day').startOf('day')

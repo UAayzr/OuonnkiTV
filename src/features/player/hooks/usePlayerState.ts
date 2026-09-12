@@ -8,7 +8,7 @@ export interface BufferedRange {
   end: number
 }
 
-export interface PlayerUiState {
+interface PlayerUiState {
   currentTime: number
   duration: number
   /**
@@ -32,7 +32,7 @@ export interface PlayerUiState {
 }
 
 /** 安全读取 video.buffered（跨域媒体在部分浏览器会抛错） */
-export const readBufferedRanges = (
+const readBufferedRanges = (
   video: HTMLVideoElement | null | undefined,
 ): BufferedRange[] => {
   if (!video) return []

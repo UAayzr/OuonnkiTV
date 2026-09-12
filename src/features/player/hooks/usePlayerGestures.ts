@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import type Artplayer from 'artplayer'
 import { isPlayerControlTarget } from '@/features/player/lib/playerCore'
+import { clampValue } from '@/features/player/lib/playerUtils'
 import {
-  clampValue,
   computeBrightnessTarget,
   computeSeekTarget,
   computeVolumeTarget,

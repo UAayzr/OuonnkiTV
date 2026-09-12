@@ -7,20 +7,20 @@ interface PlayerRouteValidationBase {
   isValid: boolean
 }
 
-export interface PlayerRouteValidationCmsResult extends PlayerRouteValidationBase {
+interface PlayerRouteValidationCmsResult extends PlayerRouteValidationBase {
   isValid: true
   mode: 'cms'
   sourceCode: string
   vodId: string
 }
 
-export interface PlayerRouteValidationInvalidResult extends PlayerRouteValidationBase {
+interface PlayerRouteValidationInvalidResult extends PlayerRouteValidationBase {
   isValid: false
   mode: 'invalid'
   message: string
 }
 
-export type PlayerRouteValidationResult =
+type PlayerRouteValidationResult =
   | PlayerRouteValidationCmsResult
   | PlayerRouteValidationInvalidResult
 

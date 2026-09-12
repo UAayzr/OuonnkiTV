@@ -56,7 +56,7 @@ interface ExportedConfig {
   meta?: MetaConfig
 }
 
-export const getInitialConfig = (): ExportedConfig | null => {
+const getInitialConfig = (): ExportedConfig | null => {
   const envConfig = getPublicEnv('OKI_INITIAL_CONFIG')
   if (!envConfig || typeof envConfig !== 'string') return null
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/shared/lib'
 
-export interface UnderlineTabOption<TKey extends string = string> {
+interface UnderlineTabOption<TKey extends string = string> {
   key: TKey
   label: ReactNode
   indicatorClassName?: string

@@ -7,7 +7,7 @@ export const PUBLIC_ENV_KEYS = [
   'OKI_INITIAL_CONFIG',
 ] as const
 
-export type PublicEnvKey = (typeof PUBLIC_ENV_KEYS)[number]
+type PublicEnvKey = (typeof PUBLIC_ENV_KEYS)[number]
 export type RuntimeConfig = Partial<Record<PublicEnvKey, string>>
 
 type RuntimeConfigGlobal = typeof globalThis & {
@@ -24,7 +24,7 @@ function getBuildTimeEnv(key: PublicEnvKey): string | undefined {
   return buildTimeConfig[key]
 }
 
-export function getRuntimeConfig(): RuntimeConfig {
+function getRuntimeConfig(): RuntimeConfig {
   return (globalThis as RuntimeConfigGlobal).__OKI_RUNTIME_CONFIG__ ?? {}
 }
 

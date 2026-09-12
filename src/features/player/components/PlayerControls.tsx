@@ -16,16 +16,7 @@ import {
 import { cn } from '@/shared/lib/utils'
 import { usePlayerState } from '@/features/player/hooks/usePlayerState'
 import { SeekBar } from '@/features/player/components/SeekBar'
-
-const formatTime = (seconds: number): string => {
-  const safe = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0
-  const mins = Math.floor(safe / 60)
-  const secs = safe % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-const isTouchDevice = () =>
-  window.matchMedia('(hover: none) and (pointer: coarse)').matches || navigator.maxTouchPoints > 0
+import { formatPlaybackTime, isTouchDevice } from '@/features/player/lib/playerUtils'
 
 const PLAYBACK_RATES = [1, 1.25, 1.5, 2]
 
@@ -484,8 +475,8 @@ export function PlayerControls({
           />
 
           <div className="ml-1.5 text-xs tabular-nums text-primary-foreground/85">
-            {formatTime(state.currentTime)}
-            <span className="text-primary-foreground/50"> / {formatTime(state.duration)}</span>
+            {formatPlaybackTime(state.currentTime)}
+            <span className="text-primary-foreground/50"> / {formatPlaybackTime(state.duration)}</span>
           </div>
 
           <div className="flex-1" />

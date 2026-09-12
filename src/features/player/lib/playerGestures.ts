@@ -1,6 +1,4 @@
-/** 将数值限制在 [min, max] 区间内 */
-export const clampValue = (value: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, value))
+import { clampValue } from './playerUtils'
 
 /** 手势方向：水平（seek）、垂直（亮度/音量）、null（未确定） */
 export type GestureAxis = 'horizontal' | 'vertical' | null

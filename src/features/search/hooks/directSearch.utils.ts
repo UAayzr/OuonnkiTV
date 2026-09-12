@@ -18,7 +18,7 @@ export function getSourcesToFetch(
   })
 }
 
-export function getVideoItemDedupeKey(item: VideoItem): string {
+function getVideoItemDedupeKey(item: VideoItem): string {
   const sourceKey = item.source_code || item.api_url || item.source_name || 'unknown-source'
   return `${sourceKey}::${String(item.vod_id)}`
 }

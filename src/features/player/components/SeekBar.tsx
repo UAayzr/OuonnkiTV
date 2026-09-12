@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createFramePreviewer, type FramePreviewer } from '@/features/player/lib/framePreviewer'
-import { clampValue } from '@/features/player/lib/playerGestures'
+import { clampValue, formatPlaybackTime } from '@/features/player/lib/playerUtils'
 import type { BufferedRange } from '@/features/player/hooks/usePlayerState'
 import { cn } from '@/shared/lib/utils'
 
@@ -30,14 +30,7 @@ const PREVIEW_CAPTURE_INTERVAL_MS = 120
 /** 抓帧器空闲销毁延时 */
 const PREVIEWER_IDLE_DESTROY_MS = 1500
 
-const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
-
-const formatTime = (seconds: number): string => {
-  const safe = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0
-  const mins = Math.floor(safe / 60)
-  const secs = safe % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
+const clamp01 = (value: number): number => clampValue(value, 0, 1)
 
 /**
  * 自研进度条：点击跳转 / 按住拖拽（松手 seek）/ 拖拽与 hover 中真帧预览 + 时间气泡。
@@ -306,7 +299,7 @@ export function SeekBar({
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
       aria-valuenow={Math.round(displayTime)}
-      aria-valuetext={formatTime(displayTime)}
+      aria-valuetext={formatPlaybackTime(displayTime)}
       tabIndex={isDisabled ? -1 : 0}
       className={cn(
         'oki-seek-bar group relative flex h-4 w-full touch-none items-center select-none',
@@ -338,7 +331,7 @@ export function SeekBar({
             )}
           </div>
           <div className="rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] leading-4 text-primary-foreground shadow">
-            {formatTime(displayTime)}
+            {formatPlaybackTime(displayTime)}
           </div>
         </div>
       )}

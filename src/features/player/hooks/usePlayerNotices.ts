@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export interface PlayerTransientNotice {
+interface PlayerTransientNotice {
   id: string
   message: string
   duration: number

@@ -30,8 +30,11 @@ import {
 import {
   attachHlsPlayback,
   BARE_PLAYER_OPTIONS,
+  BRIGHTNESS,
   computeMiniPlayerRect,
   createBareArtplayer,
+  formatPlaybackTime,
+  isTouchDevice,
   validatePlayerRoute,
 } from '@/features/player/lib'
 
@@ -44,13 +47,6 @@ interface PlayerRouteParams {
 const parseEpisodeIndex = (value: string | null): number => {
   const parsed = Number.parseInt(value || '0', 10)
   return Number.isNaN(parsed) || parsed < 0 ? 0 : parsed
-}
-
-const formatDurationLabel = (seconds: number): string => {
-  const safe = Math.max(0, Math.floor(seconds))
-  const mins = Math.floor(safe / 60)
-  const secs = safe % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 const stripHtmlTags = (value: string) => {
@@ -67,9 +63,6 @@ const stripHtmlTags = (value: string) => {
     .replace(/\s+/g, ' ')
     .trim()
 }
-
-const isTouchDevice = () =>
-  window.matchMedia('(hover: none) and (pointer: coarse)').matches || navigator.maxTouchPoints > 0
 
 const shouldFallbackEpisodeToFirst = (episodeCount: number, selectedEpisode: number) =>
   episodeCount > 0 && selectedEpisode >= episodeCount
@@ -153,11 +146,11 @@ export default function UnifiedPlayer() {
       <div className="oki-player-overlay pointer-events-none absolute top-1/2 left-1/2 z-[160] -translate-x-1/2 -translate-y-1/2">
         <div className="rounded-lg border border-primary-foreground/15 bg-black/70 px-4 py-2 text-center shadow-xl backdrop-blur-sm">
           <div className="text-lg font-medium tabular-nums text-primary-foreground">
-            {formatDurationLabel(gestureSeekPreviewTime)}
+            {formatPlaybackTime(gestureSeekPreviewTime)}
           </div>
           <div className="mt-0.5 text-[11px] tabular-nums text-primary-foreground/65">
             {seekPreviewDelta >= 0 ? '+' : '-'}
-            {formatDurationLabel(Math.abs(seekPreviewDelta))}
+            {formatPlaybackTime(Math.abs(seekPreviewDelta))}
           </div>
         </div>
       </div>
@@ -189,8 +182,11 @@ export default function UnifiedPlayer() {
             <div
               className="h-full rounded-full bg-primary transition-[width] duration-75"
               style={{
+                // 亮度条按 BRIGHTNESS 的取值区间归一化，避免把区间边界写死在这里
                 width: `${Math.round(
-                  ((gestureBrightnessLevel - 0.25) / (1.75 - 0.25)) * 100,
+                  ((gestureBrightnessLevel - BRIGHTNESS.min) /
+                    (BRIGHTNESS.max - BRIGHTNESS.min)) *
+                    100,
                 )}%`,
               }}
             />

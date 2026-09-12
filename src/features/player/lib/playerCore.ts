@@ -56,7 +56,7 @@ export const BARE_PLAYER_OPTIONS = {
   autoMini: false,
 }
 
-export type BarePlayerOptions = ConstructorParameters<typeof Artplayer>[0]
+type BarePlayerOptions = ConstructorParameters<typeof Artplayer>[0]
 
 /**
  * 创建"裸内核"播放器：Artplayer 只负责解码与渲染，
