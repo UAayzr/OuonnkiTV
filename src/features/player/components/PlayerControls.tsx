@@ -146,7 +146,7 @@ function VolumeControl({
       */}
       <div
         className={cn(
-          'absolute left-full top-1/2 ml-1 flex origin-left -translate-y-1/2 items-center gap-2 rounded-full border border-primary-foreground/15 bg-black/85 px-3 py-1.5 shadow-xl backdrop-blur-xl',
+          'absolute left-full top-1/2 ml-1 flex origin-left -translate-y-1/2 items-center gap-2 rounded-full border border-primary-foreground/15 bg-black/90 px-3 py-1.5 shadow-xl',
           // 注意：Tailwind 4 把 translate/scale 编译成独立 CSS 属性，不在 transform 里，
           // 所以过渡列表必须逐个列出，否则只有 opacity 会动、位移与缩放是瞬变。
           'transition-[opacity,translate,scale] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft)]',
@@ -231,7 +231,7 @@ function SettingsPanel({
   return (
     <div
       ref={panelRef}
-      className="pointer-events-auto absolute right-0 bottom-full z-30 mb-1 w-60 origin-bottom-right rounded-xl border border-primary-foreground/15 bg-black/85 p-2 shadow-2xl backdrop-blur-xl"
+      className="pointer-events-auto absolute right-0 bottom-full z-30 mb-1 w-60 origin-bottom-right rounded-xl border border-primary-foreground/15 bg-black/90 p-2 shadow-2xl"
       style={{
         animation: 'settings-pop 200ms var(--motion-ease-soft)',
       }}

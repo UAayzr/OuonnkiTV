@@ -134,6 +134,13 @@ export default function UnifiedPlayer() {
   })
 
   const playerOverlayContainer = activeArt?.template?.$player ?? null
+  /*
+   * 播放器内的浮层一律不用 backdrop-blur。
+   *
+   * 它会让浏览器新建合成层去截取背景做模糊，这个过程要重新合成下面的 video——
+   * 真机上表现为画面比例发生极微弱的变化（长按加速、横滑 seek 只要浮层一冒出来就触发，
+   * 桌面 Chrome 的合成器行为不同，测不出来）。这里统一改用更实的半透明黑底保证可读性。
+   */
   // 滑动 seek 预览：居中显示，避免与顶部标题条重叠
   const seekPreviewDelta =
     gestureSeekPreviewTime !== null && activeArt
@@ -142,7 +149,7 @@ export default function UnifiedPlayer() {
   const seekPreviewOverlay =
     gestureSeekPreviewTime !== null ? (
       <div className="oki-player-overlay pointer-events-none absolute top-1/2 left-1/2 z-[160] -translate-x-1/2 -translate-y-1/2">
-        <div className="rounded-lg border border-primary-foreground/15 bg-black/70 px-4 py-2 text-center shadow-xl backdrop-blur-sm">
+        <div className="rounded-lg border border-primary-foreground/15 bg-black/80 px-4 py-2 text-center shadow-xl">
           <div className="text-lg font-medium tabular-nums text-primary-foreground">
             {formatPlaybackTime(gestureSeekPreviewTime)}
           </div>
@@ -157,13 +164,13 @@ export default function UnifiedPlayer() {
   /*
    * 长按加速指示：手机上唯一的倍速开关就是长按（控制条里的倍速按钮是桌面专属），
    * 没有这个提示用户无从得知当前是否处于加速态。
-   * 与滑动 seek 预览互斥（长按与横滑不会同时成立），但位置错开顶部，
-   * 避免和居中的 seek 预览、右上的临时通知打架。
+   * 位置贴顶，避开居中的 seek 预览与右上的临时通知。
+   * 两者不会同时可见——由 usePlayerGestures 保证：长按加速一旦触发，本次触摸就不再接管横滑。
    */
   const longPressRateOverlay =
     gestureLongPressRate !== null ? (
       <div className="oki-player-overlay pointer-events-none absolute top-3 left-1/2 z-[160] -translate-x-1/2">
-        <div className="flex min-w-28 items-center justify-center gap-12 rounded-full border border-primary-foreground/15 bg-black/50 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+        <div className="flex min-w-28 items-center justify-center gap-12 rounded-full border border-primary-foreground/15 bg-black/65 px-3 py-1.5 shadow-lg">
           <FastForward className="size-4 shrink-0 text-primary-foreground" />
           <span className="text-sm font-medium tabular-nums text-primary-foreground">
             {gestureLongPressRate}x
@@ -623,7 +630,7 @@ export default function UnifiedPlayer() {
                 {transientNotices.map(notice => (
                   <div
                     key={notice.id}
-                    className="oki-player-overlay pointer-events-auto w-[min(78vw,340px)] overflow-hidden rounded-md border border-primary-foreground/15 bg-black/65 shadow-lg backdrop-blur-sm"
+                    className="oki-player-overlay pointer-events-auto w-[min(78vw,340px)] overflow-hidden rounded-md border border-primary-foreground/15 bg-black/75 shadow-lg"
                   >
                     <div className="px-3 py-1.5 text-xs text-primary-foreground">{notice.message}</div>
                     <div className="h-0.5 bg-primary-foreground/20">
@@ -640,7 +647,7 @@ export default function UnifiedPlayer() {
               </div>
             )}
             {isDetailRefreshing && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60">
                 <div className="oki-player-overlay flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-primary-foreground">
                   <Spinner size="sm" />
                   正在切换资源...

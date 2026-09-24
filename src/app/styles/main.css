@@ -842,6 +842,17 @@ html.dark.theme-lavender {
 }
 
 /*
+ * Artplayer 默认给 video 打的是 object-fit: fill——那会把画面拉伸填满容器。
+ * 项目靠 ready 时写一次内联样式覆盖成 contain，等比显示完全依赖那次赋值：
+ * 内联样式一旦被 Artplayer 或浏览器重置，画面会立刻被拉变形。
+ * 这里用 CSS 兜底（不加 !important，内联仍在时优先级更高，行为不变；
+ * 内联丢失时由本条接管），任何情况下都保持等比。
+ */
+.art-video-player .art-video {
+  object-fit: contain;
+}
+
+/*
  * progress / thumbnails 是 position:"top" 的内置控件，挂在 .art-bottom 顶部而非
  * .art-controls 内，隐藏默认控制条时不会一并消失（默认进度条会残留在自绘控制条上方）。
  */
@@ -901,6 +912,19 @@ html.dark.theme-lavender {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+}
+
+/*
+ * 全屏下完全接管触摸。
+ *
+ * manipulation 仍然允许浏览器把手势识别成滚动/滑动：慢速横滑时自绘层能在第一个
+ * touchmove 里 preventDefault 抢先接管，但快速滑动时浏览器可能先一步判定为页面手势，
+ * 于是露出系统/浏览器原生控件（手机上表现为"快滑冒出原生 UI"）。
+ * 全屏时播放器本就占满视口、无需页面滚动，直接 none 关掉浏览器的手势判定。
+ */
+.art-video-player.art-fullscreen,
+.art-video-player.art-fullscreen-web {
+  touch-action: none;
 }
 
 /*
