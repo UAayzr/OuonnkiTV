@@ -3,10 +3,11 @@ import type Artplayer from 'artplayer'
 import { isPlayerControlTarget } from '@/features/player/lib/playerCore'
 import { clampValue } from '@/features/player/lib/playerUtils'
 import {
-  computeSeekTarget,
+  accumulateSeekOffset,
   GESTURE_CONFIG,
   isDoubleTap,
   resolveGestureAxis,
+  resolveSeekSpeedMultiplier,
   type GestureAxis,
   type TapRecord,
 } from '@/features/player/lib/playerGestures'
@@ -28,6 +29,16 @@ interface GestureSession {
   /** 水平滑动待 seek 的目标时间 */
   pendingSeekTime: number | null
   longPressTriggered: boolean
+  /** 上一次 move 的净位移与时间戳，用于算每步增量与速度 */
+  lastDeltaX: number
+  lastMoveAt: number
+  /**
+   * 累计的 seek 偏移（秒）。逐帧累加而非拿净位移整体相乘——
+   * 倍率随速度浮动，由快转慢时整体相乘会让手指前进而目标倒退。
+   */
+  seekOffset: number
+  /** 指数平滑后的滑动速度（px/ms）；手指停住时保留最后一个值 */
+  smoothedSpeed: number
 }
 
 interface UsePlayerGesturesParams {
@@ -108,11 +119,20 @@ export function usePlayerGestures({
     let suppressClickUntil = 0
     let playbackRateBeforeLongPress = 1
     let locked = false
+    /** 待执行的控制条切换（单击延迟到双击窗口结束后才生效） */
+    let pendingTapTimer: number | null = null
 
     const clearLongPressTimer = () => {
       if (longPressTimer !== null) {
         window.clearTimeout(longPressTimer)
         longPressTimer = null
+      }
+    }
+
+    const clearPendingTap = () => {
+      if (pendingTapTimer !== null) {
+        window.clearTimeout(pendingTapTimer)
+        pendingTapTimer = null
       }
     }
 
@@ -170,8 +190,11 @@ export function usePlayerGestures({
     /**
      * 单击/双击仲裁（桌面 click 与触屏 touchend 共用）。
      *
-     * 单击**立即生效**：控制条显隐是高频操作，若等双击窗口结束才执行会明显迟钝。
-     * 双击时即便单击已切换过控制条也无副作用——暂停事件本身会让控制条回到显示态。
+     * 单击**延迟到双击窗口结束**才生效。
+     * 早先是"立即生效"，理由是控制条显隐属高频操作、等窗口结束会迟钝。但那样
+     * 双击的第一下就会先切换一次控制条——用户双击暂停/播放时，播放栏会无端弹出来
+     * 再被打回去，闪一下很难受。单击只用来开控制条，多等这一个双击窗口是值得的
+     * （这段时间本就是系统用来区分单/双击的）。
      */
     const handleTap = (x: number, y: number) => {
       const now = Date.now()
@@ -187,13 +210,19 @@ export function usePlayerGestures({
         )
       ) {
         lastTap = null
+        // 第一次点击排队的控制条切换就此作废：双击只做播放/暂停
+        clearPendingTap()
         suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
         togglePlayback()
         return
       }
 
       lastTap = { x, y, timestamp: now }
-      callbacksRef.current.onSurfaceTap?.()
+      clearPendingTap()
+      pendingTapTimer = window.setTimeout(() => {
+        pendingTapTimer = null
+        callbacksRef.current.onSurfaceTap?.()
+      }, GESTURE_CONFIG.doubleTapWindowMs)
     }
 
     // ---------- 鼠标 / 通用点击 ----------
@@ -240,6 +269,10 @@ export function usePlayerGestures({
 
     const onTouchStart = (event: TouchEvent) => {
       if (sessionRef.current) return
+
+      // 新的触摸已开始：上一次点击排队中的控制条切换作废
+      clearPendingTap()
+
       if (isPlayerControlTarget(event.target)) return
       // 多指（缩放等）不参与手势
       if (event.touches.length > 1) return
@@ -248,6 +281,16 @@ export function usePlayerGestures({
       if (!touch) return
 
       const { x, y, width } = toLocal(touch.clientX, touch.clientY)
+
+      /*
+       * 能接管时，在触摸起点就掐掉浏览器的原生手势判定。
+       * 只靠 touchmove 的 preventDefault 不够——浏览器可能在第一个 touchmove 派发前
+       * 就按移动速度把手势判成滚动或长按菜单，快滑时便会漏出系统 UI。
+       * 只在"全屏 + 手势开关打开"时掐，非全屏仍保留页面滚动能力。
+       */
+      if (canSwipe() && event.cancelable) {
+        event.preventDefault()
+      }
 
       sessionRef.current = {
         touchId: touch.identifier,
@@ -258,6 +301,10 @@ export function usePlayerGestures({
         axis: null,
         pendingSeekTime: null,
         longPressTriggered: false,
+        lastDeltaX: 0,
+        lastMoveAt: Date.now(),
+        seekOffset: 0,
+        smoothedSpeed: 0,
       }
 
       if (!canSwipe()) return
@@ -296,6 +343,13 @@ export function usePlayerGestures({
         const axis = resolveGestureAxis(deltaX, deltaY, GESTURE_CONFIG.axisLockThresholdPx)
         if (!axis) return
 
+        /*
+         * 长按加速已触发：本次触摸会话彻底不接管横滑。
+         * 加速期间手指怎么移动都不跳时长——"按住加速"是明确意图，手一抖就跳走会打断它；
+         * 需要跳转请先松手再重新横滑。顺带也保证了倍率胶囊与 seek 预览不会同时出现。
+         */
+        if (session.longPressTriggered) return
+
         // 已确认是滑动，抑制浏览器随后可能补发的合成 click
         suppressFollowupClicks(SYNTHETIC_CLICK_SUPPRESS_MS)
 
@@ -311,12 +365,43 @@ export function usePlayerGestures({
       }
 
       if (session.axis === 'horizontal') {
-        const previewTime = computeSeekTarget(
-          session.startTime,
-          deltaX,
+        /*
+         * 逐帧累加 seek 偏移。
+         *
+         * 速度用「本步位移 / 帧间隔」估算后做指数平滑；只在有位移时更新，
+         * 手指停住时保留最后一个值——否则速度随时间衰减，倍率会自己往下掉。
+         *
+         * 关键：这一步算出的贡献立即固化，绝不回头重算整段位移。
+         * 倍率随速度浮动，若拿"净位移 × 当前倍率"整体相乘，
+         * 由快转慢时位移还在涨、倍率却在跌，目标时间就会倒退。
+         */
+        const now = Date.now()
+        const stepPx = deltaX - session.lastDeltaX
+        const stepMs = now - session.lastMoveAt
+        session.lastDeltaX = deltaX
+        session.lastMoveAt = now
+
+        if (stepPx !== 0 && stepMs > 0) {
+          const instantSpeed = Math.abs(stepPx) / stepMs
+          session.smoothedSpeed =
+            session.smoothedSpeed <= 0
+              ? instantSpeed
+              : session.smoothedSpeed * 0.6 + instantSpeed * 0.4
+        }
+
+        session.seekOffset = accumulateSeekOffset(
+          session.seekOffset,
+          stepPx,
           session.playerWidth,
-          art.duration,
+          resolveSeekSpeedMultiplier(session.smoothedSpeed),
         )
+
+        const duration = art.duration
+        const previewTime =
+          Number.isFinite(duration) && duration > 0
+            ? clampValue(session.startTime + session.seekOffset, 0, duration)
+            : session.startTime
+
         session.pendingSeekTime = previewTime
         callbacksRef.current.onSeekGesturePreviewChange?.(previewTime)
         if (event.cancelable) event.preventDefault()
@@ -384,7 +469,8 @@ export function usePlayerGestures({
     $player.addEventListener('click', onClickCapture, true)
     $player.addEventListener('dblclick', onDblClickCapture, true)
     $player.addEventListener('contextmenu', onContextMenuCapture, true)
-    $player.addEventListener('touchstart', onTouchStart, { passive: true })
+    // passive: false —— 需要在触摸起点就 preventDefault，掐掉浏览器的原生手势判定
+    $player.addEventListener('touchstart', onTouchStart, { passive: false })
     $player.addEventListener('touchmove', onTouchMove, { passive: false })
     $player.addEventListener('touchend', onTouchEnd)
     $player.addEventListener('touchcancel', onTouchCancel)
@@ -392,6 +478,7 @@ export function usePlayerGestures({
 
     return () => {
       resetSession()
+      clearPendingTap()
       $player.removeEventListener('click', onClickCapture, true)
       $player.removeEventListener('dblclick', onDblClickCapture, true)
       $player.removeEventListener('contextmenu', onContextMenuCapture, true)

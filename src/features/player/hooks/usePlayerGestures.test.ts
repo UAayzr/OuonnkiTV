@@ -39,6 +39,24 @@ const createFakeArt = (options: { fullscreen?: boolean } = {}): FakeArt => {
   $player.appendChild(video)
   document.body.appendChild($player)
 
+  /*
+   * jsdom 不做布局，getBoundingClientRect 恒为全 0。补一个确定尺寸，
+   * 否则手势换算里的 playerWidth 会退化成 0（safeWidth 兜底为 1），
+   * 每步位移被放大成离谱的秒数、一路撞在 duration 的钳制边界上，测不出真实行为。
+   */
+  $player.getBoundingClientRect = () =>
+    ({
+      width: 360,
+      height: 200,
+      top: 0,
+      left: 0,
+      right: 360,
+      bottom: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }) as DOMRect
+
   let paused = true
   Object.defineProperty(video, 'paused', { get: () => paused, configurable: true })
 
@@ -55,7 +73,7 @@ const createFakeArt = (options: { fullscreen?: boolean } = {}): FakeArt => {
     template: { $player },
     video,
     currentTime: 0,
-    duration: 120,
+    duration: 600,
     playbackRate: 1,
     fullscreen: options.fullscreen ?? false,
     fullscreenWeb: false,
@@ -116,7 +134,7 @@ describe('usePlayerGestures', () => {
     document.body.innerHTML = ''
   })
 
-  it('画面单击立即触发 onSurfaceTap（不等双击窗口，保证显隐手感）', () => {
+  it('画面单击在双击窗口结束后才触发 onSurfaceTap（避免双击时误切控制条）', () => {
     const { art, video } = createFakeArt()
     const onSurfaceTap = vi.fn()
     renderGestures({ art, onSurfaceTap })
@@ -125,21 +143,32 @@ describe('usePlayerGestures', () => {
       video.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }))
     })
 
+    // 窗口期内不触发：这段时间正用来区分单击与双击
+    expect(onSurfaceTap).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(400)
+    })
+
     expect(onSurfaceTap).toHaveBeenCalledTimes(1)
   })
 
-  it('双击触发播放/暂停，且只切换一次', () => {
+  it('双击触发播放/暂停，且不切换控制条', () => {
     const { art, video, play } = createFakeArt()
-    renderGestures({ art })
+    const onSurfaceTap = vi.fn()
+    renderGestures({ art, onSurfaceTap })
 
     act(() => {
       video.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }))
       video.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }))
       video.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: 10, clientY: 10 }))
+      vi.advanceTimersByTime(400)
     })
 
     // 第二次 click 判定为双击 → 播放；随后的 dblclick 被抑制，不重复触发
     expect(play).toHaveBeenCalledTimes(1)
+    // 第一次点击排队的控制条切换被撤销：双击只做播放/暂停
+    expect(onSurfaceTap).not.toHaveBeenCalled()
   })
 
   it('已在播放时双击走暂停（不依赖 art.playing 的 currentTime>0 判定）', () => {
@@ -188,7 +217,8 @@ describe('usePlayerGestures', () => {
 
   it('触屏轻点两次触发播放/暂停（自行仲裁，不依赖浏览器 dblclick）', () => {
     const { art, $player, play } = createFakeArt()
-    renderGestures({ art })
+    const onSurfaceTap = vi.fn()
+    renderGestures({ art, onSurfaceTap })
 
     act(() => {
       const touch = { clientX: 50, clientY: 50, identifier: 1 }
@@ -196,12 +226,15 @@ describe('usePlayerGestures', () => {
       $player.dispatchEvent(makeTouchEvent('touchend', [touch]))
       $player.dispatchEvent(makeTouchEvent('touchstart', [touch]))
       $player.dispatchEvent(makeTouchEvent('touchend', [touch]))
+      vi.advanceTimersByTime(400)
     })
 
     expect(play).toHaveBeenCalledTimes(1)
+    // 双击只做播放/暂停，控制条不被切走
+    expect(onSurfaceTap).not.toHaveBeenCalled()
   })
 
-  it('触屏单次轻点立即触发 onSurfaceTap', () => {
+  it('触屏单次轻点在双击窗口结束后触发 onSurfaceTap', () => {
     const { art, $player } = createFakeArt()
     const onSurfaceTap = vi.fn()
     renderGestures({ art, onSurfaceTap })
@@ -210,6 +243,12 @@ describe('usePlayerGestures', () => {
       const touch = { clientX: 50, clientY: 50, identifier: 1 }
       $player.dispatchEvent(makeTouchEvent('touchstart', [touch]))
       $player.dispatchEvent(makeTouchEvent('touchend', [touch]))
+    })
+
+    expect(onSurfaceTap).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(400)
     })
 
     expect(onSurfaceTap).toHaveBeenCalledTimes(1)
@@ -243,6 +282,40 @@ describe('usePlayerGestures', () => {
     })
 
     expect(onSeekGesturePreviewChange).toHaveBeenCalled()
+  })
+
+  it('由快转慢时 seek 目标不回退（手指一直前进，目标只能单调不减）', () => {
+    const { art, $player } = createFakeArt({ fullscreen: true })
+    const targets: number[] = []
+    const onSeekGesturePreviewChange = vi.fn((time: number) => targets.push(time))
+    renderGestures({ art, swipeGestureEnabled: true, onSeekGesturePreviewChange })
+
+    act(() => {
+      const touch = { clientX: 40, clientY: 100, identifier: 1 }
+      $player.dispatchEvent(makeTouchEvent('touchstart', [touch]))
+
+      // 前半段：快滑，每帧 40px / 10ms
+      let x = 40
+      for (let i = 0; i < 4; i += 1) {
+        x += 40
+        vi.advanceTimersByTime(10)
+        $player.dispatchEvent(makeTouchEvent('touchmove', [{ ...touch, clientX: x }]))
+      }
+      // 后半段：减速，手指仍在前进，但每帧只走 5px / 120ms
+      for (let i = 0; i < 4; i += 1) {
+        x += 5
+        vi.advanceTimersByTime(120)
+        $player.dispatchEvent(makeTouchEvent('touchmove', [{ ...touch, clientX: x }]))
+      }
+
+      $player.dispatchEvent(makeTouchEvent('touchend', [{ ...touch, clientX: x }]))
+    })
+
+    expect(targets.length).toBe(8)
+    // 手指始终在前进：若拿"净位移 × 当前倍率"整体相乘，减速后倍率骤降会让目标倒退
+    for (let i = 1; i < targets.length; i += 1) {
+      expect(targets[i]).toBeGreaterThanOrEqual(targets[i - 1])
+    }
   })
 
   it('纵向滑动不接管：不触发 seek 预览，也不会被误判成轻点', () => {
@@ -286,15 +359,17 @@ describe('usePlayerGestures', () => {
     expect(art.playbackRate).toBe(1)
   })
 
-  it('长按后继续横向拖动再抬手：seek 生效且预览收尾（不残留在屏幕上）', () => {
+  it('长按加速期间横滑不接管：不跳时长、预览不出现，抬手才恢复倍速', () => {
     const { art, $player } = createFakeArt({ fullscreen: true })
     const onSeekGesturePreviewChange = vi.fn()
     const onSeekGesturePreviewEnd = vi.fn()
+    const onLongPressRateChange = vi.fn()
     renderGestures({
       art,
       swipeGestureEnabled: true,
       onSeekGesturePreviewChange,
       onSeekGesturePreviewEnd,
+      onLongPressRateChange,
     })
 
     act(() => {
@@ -304,18 +379,22 @@ describe('usePlayerGestures', () => {
       // 先长按到触发 2 倍速，此时 axis 仍是 null
       vi.advanceTimersByTime(500)
       expect(art.playbackRate).toBe(2)
+      expect(onLongPressRateChange).toHaveBeenLastCalledWith(2)
 
-      // 不抬手，继续横向拖动 → axis 这时才锁成 horizontal，预览出现
+      // 加速期间横向拖动：本次会话不再接管横滑，
+      // 倍率保持不变、不跳时长、预览也不出现（否则两个浮层会一起抢画面中轴）
       const moved = { clientX: 190, clientY: 52, identifier: 1 }
       $player.dispatchEvent(makeTouchEvent('touchmove', [moved]))
+      expect(art.playbackRate).toBe(2)
+      expect(art.seek).toBe(0)
+      expect(onSeekGesturePreviewChange).not.toHaveBeenCalled()
+      expect(onSeekGesturePreviewEnd).not.toHaveBeenCalled()
+
+      // 抬手才结束加速
       $player.dispatchEvent(makeTouchEvent('touchend', [moved]))
     })
 
-    expect(onSeekGesturePreviewChange).toHaveBeenCalled()
-    // 若长按分支抢先 return，这两个断言都会失败：
-    expect(onSeekGesturePreviewEnd).toHaveBeenCalled()
-    expect(art.seek).toBe(120)
-    // 抬手同时结束加速
     expect(art.playbackRate).toBe(1)
+    expect(onLongPressRateChange).toHaveBeenLastCalledWith(null)
   })
 })
