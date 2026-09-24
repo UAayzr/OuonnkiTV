@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Spinner } from '@/shared/components/ui/spinner'
 import { useDocumentTitle, useCmsClient, useIdleReady } from '@/shared/hooks'
 import { throttle } from '@/shared/lib/throttle'
+import { cn } from '@/shared/lib/utils'
 import { useApiStore } from '@/shared/store/apiStore'
 import { useSettingStore } from '@/shared/store/settingStore'
 import { useViewingHistoryStore } from '@/shared/store/viewingHistoryStore'
@@ -139,27 +140,59 @@ export default function UnifiedPlayer() {
    *
    * 它会让浏览器新建合成层去截取背景做模糊，这个过程要重新合成下面的 video——
    * 真机上表现为画面比例发生极微弱的变化（长按加速、横滑 seek 只要浮层一冒出来就触发，
-   * 桌面 Chrome 的合成器行为不同，测不出来）。这里统一改用更实的半透明黑底保证可读性。
+   * 桌面 Chrome 的合成器行为不同，测不出来）。通透感改用径向渐变光晕实现。
    */
-  // 滑动 seek 预览：居中显示，避免与顶部标题条重叠
-  const seekPreviewDelta =
-    gestureSeekPreviewTime !== null && activeArt
-      ? gestureSeekPreviewTime - (activeArt.currentTime || 0)
-      : 0
-  const seekPreviewOverlay =
-    gestureSeekPreviewTime !== null ? (
-      <div className="oki-player-overlay pointer-events-none absolute top-1/2 left-1/2 z-[160] -translate-x-1/2 -translate-y-1/2">
-        <div className="rounded-lg border border-primary-foreground/15 bg-black/80 px-4 py-2 text-center shadow-xl">
-          <div className="text-lg font-medium tabular-nums text-primary-foreground">
-            {formatPlaybackTime(gestureSeekPreviewTime)}
-          </div>
-          <div className="mt-0.5 text-[11px] tabular-nums text-primary-foreground/65">
-            {seekPreviewDelta >= 0 ? '+' : '-'}
-            {formatPlaybackTime(Math.abs(seekPreviewDelta))}
-          </div>
+
+  /*
+   * 滑动 seek 预览：居中显示，避免与顶部标题条重叠。
+   *
+   * 常驻挂载、用类名切换显隐，而不是条件渲染——手势一结束 gestureSeekPreviewTime
+   * 就变 null，直接卸载会「啪」地消失、没有退场。因此把最后一次的值缓存下来，
+   * 退场动画期间内容不会闪空。
+   */
+  const lastSeekPreviewRef = useRef<{ time: number; delta: number } | null>(null)
+  if (gestureSeekPreviewTime !== null && activeArt) {
+    lastSeekPreviewRef.current = {
+      time: gestureSeekPreviewTime,
+      delta: gestureSeekPreviewTime - (activeArt.currentTime || 0),
+    }
+  }
+  const seekPreview = lastSeekPreviewRef.current
+  const seekPreviewActive = gestureSeekPreviewTime !== null
+  const seekPreviewOverlay = seekPreview ? (
+    <div
+      className={cn(
+        'oki-player-overlay pointer-events-none absolute top-1/2 left-1/2 z-[160] -translate-x-1/2 -translate-y-1/2',
+        // Tailwind 4 把 scale 编译成独立 CSS 属性（不在 transform 里），过渡列表必须逐个列
+        'transition-[opacity,scale] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft)]',
+        seekPreviewActive ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
+      )}
+    >
+      {/*
+        光晕：径向渐变的椭圆，黑度从中心单调递减、一路散开到全透明——
+        没有边界和圆角，也没有「均匀黑块 + 边缘羽化」的平台期，
+        视觉上就是从中心散开的一层阴影，而不是一块面板。
+        尺寸仍要保证文字落在还有足够黑度的范围内（48px 时间串约 ±98px 宽），
+        但底子比早先淡，可读性更多交给文字自身的阴影。
+      */}
+      <div
+        className="absolute top-1/2 left-1/2 h-[min(38vh,260px)] w-[min(90vw,440px)] -translate-x-1/2 -translate-y-1/2"
+        style={{
+          background:
+            'radial-gradient(ellipse 50% 50% at center, rgb(0 0 0 / 0.5) 0%, rgb(0 0 0 / 0.4) 28%, rgb(0 0 0 / 0.26) 50%, rgb(0 0 0 / 0.12) 70%, rgb(0 0 0 / 0.03) 87%, transparent 100%)',
+        }}
+      />
+      <div className="relative text-center drop-shadow-[0_2px_12px_#000000cc]">
+        <div className="text-5xl font-semibold tabular-nums text-primary-foreground">
+          {formatPlaybackTime(seekPreview.time)}
+        </div>
+        <div className="mt-1 text-base tabular-nums text-primary-foreground/70">
+          {seekPreview.delta >= 0 ? '+' : '-'}
+          {formatPlaybackTime(Math.abs(seekPreview.delta))}
         </div>
       </div>
-    ) : null
+    </div>
+  ) : null
 
   /*
    * 长按加速指示：手机上唯一的倍速开关就是长按（控制条里的倍速按钮是桌面专属），
