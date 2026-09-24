@@ -832,6 +832,16 @@ html.dark.theme-lavender {
 }
 
 /*
+ * .art-bottom 是内置控制条的容器，自带一层覆盖整个播放器高度的渐变
+ * （实测 linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.4), #000)，铺满 1920x935），
+ * 原本用来给内置控制条垫底压暗画面。控制条已被自绘层取代，这层渐变就成了
+ * 压在画面下半部的多余阴影——容器里此时已无可见内容，去掉背景即可。
+ */
+.art-video-player .art-bottom {
+  background: none !important;
+}
+
+/*
  * progress / thumbnails 是 position:"top" 的内置控件，挂在 .art-bottom 顶部而非
  * .art-controls 内，隐藏默认控制条时不会一并消失（默认进度条会残留在自绘控制条上方）。
  */
@@ -871,11 +881,17 @@ html.dark.theme-lavender {
   mask-image: radial-gradient(circle at center, transparent 2.5px, #000 3px);
 }
 
-/* 裸内核：隐藏 Artplayer 内置信息层与右键菜单（交互已由 usePlayerGestures 接管） */
+/*
+ * 裸内核：隐藏 Artplayer 的内置交互层（交互已由 usePlayerGestures 接管）。
+ *
+ * .art-state 是暂停时浮在画面正中的大播放按钮，且 pointer-events 为 auto——
+ * 既与自绘控制条语义重复，又会和居中显示的 seek 预览抢同一块位置。
+ */
 .art-video-player .art-info,
 .art-video-player .art-contextmenu,
 .art-video-player .art-contextmenus,
-.art-video-player .art-notice {
+.art-video-player .art-notice,
+.art-video-player .art-state {
   display: none !important;
 }
 
