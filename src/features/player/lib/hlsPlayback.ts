@@ -60,11 +60,24 @@ export function attachHlsPlayback({
 
       if (HlsClass.isSupported()) {
         artWithHls.hls?.destroy()
-        const hlsConfig: Partial<HlsConfig> = adFilteringEnabled
-          ? {
-              loader: getCustomHlsLoaderClass(HlsClass) as unknown as typeof HlsClass.DefaultConfig.loader,
-            }
-          : {}
+        /*
+         * 回看缓冲策略：
+         * - backBufferLength: Infinity —— 不让 hls.js 主动清播放头左侧的缓冲。
+         * - maxBufferSize —— 默认 60MB 只够 3000k 码率约 160 秒，播几分钟后回看
+         *   就得重新下载分片（浏览器 SourceBuffer 逐出是物理行为，拦不住）。
+         *   提到 120MB ≈ 5 分钟的回看窗口：日常回看直接命中 MSE 留存，零网络；
+         *   超出窗口的部分重新下载也只要 1-2 个分片（秒级），不值得上分片缓存。
+         */
+        const hlsConfig: Partial<HlsConfig> = {
+          backBufferLength: Infinity,
+          maxBufferSize: 120 * 1000 * 1000,
+          ...(adFilteringEnabled
+            ? {
+                loader:
+                  getCustomHlsLoaderClass(HlsClass) as unknown as typeof HlsClass.DefaultConfig.loader,
+              }
+            : {}),
+        }
         const hls = new HlsClass(hlsConfig)
         hls.loadSource(url)
         hls.attachMedia(video)
