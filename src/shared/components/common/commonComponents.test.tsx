@@ -27,6 +27,32 @@ describe('通用卡片和确认弹窗', () => {
     expect(screen.getByText('暂无海报')).toBeInTheDocument()
   })
 
+  it('海报卡片支持次级角标（源速度），缺省时不渲染', () => {
+    render(
+      <MemoryRouter>
+        <MediaPosterCard to="/play" posterUrl={null} title="测试影片" topRightLabel="源A" />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByText('8.5 MB/s')).not.toBeInTheDocument()
+
+    const { getByText } = render(
+      <MemoryRouter>
+        <MediaPosterCard
+          to="/play"
+          posterUrl={null}
+          title="测试影片"
+          topRightLabel="源A"
+          topRightSecondaryLabel="8.5 MB/s"
+        />
+      </MemoryRouter>,
+    )
+    const label = getByText('8.5 MB/s')
+    expect(label).toBeInTheDocument()
+    // 弹性浮现动画 + 无障碍降级
+    expect(label.className).toContain('speed-tag-in')
+    expect(label.className).toContain('motion-reduce:animate-none')
+  })
+
   it('确认弹窗能取消并确认操作', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

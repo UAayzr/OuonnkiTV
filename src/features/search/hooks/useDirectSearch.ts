@@ -8,12 +8,12 @@ import {
   getSourcesToFetch,
   type SourcePaginationInfo,
 } from './directSearch.utils'
+import { sortResultsBySourceSpeed, useSourceSpeedStore } from '../lib/sourceSpeed'
 
 export function useDirectSearch() {
   const [directResults, setDirectResults] = useState<VideoItem[]>([])
   const [directLoading, setDirectLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const [searchProgress, setSearchProgress] = useState({ completed: 0, total: 0 })
   const [cmsPagination, setCmsPagination] = useState<Pagination>({
     page: 1,
     totalPages: 0,
@@ -33,13 +33,26 @@ export function useDirectSearch() {
   const [successfulSourcesInCurrentPage, setSuccessfulSourcesInCurrentPage] = useState<Set<string>>(new Set())
   // 新增：请求版本号，用于处理竞态条件
   const requestVersionRef = useRef(0)
+  // 本页进度分母（每次请求重置）
+  const totalForPageRef = useRef(0)
 
   const { videoAPIs } = useApiStore()
   const cmsClient = useCmsClient()
 
+  // 速度表：zustand 单轨订阅，测速条目增量 merge 时自动触发重渲染
+  const sourceSpeeds = useSourceSpeedStore(state => state.entries)
+
   const selectedAPIs = useMemo(() => {
     return videoAPIs.filter(api => api.isEnabled)
   }, [videoAPIs])
+
+  // 速度条目更新 → 对当前结果按新速度重排（幂等：结果为空/未测时跳过）
+  useEffect(() => {
+    if (sourceSpeeds.size === 0 || directResults.length === 0) return
+    setDirectResults(prev =>
+      prev.length > 0 ? sortResultsBySourceSpeed(prev, sourceSpeeds) : prev,
+    )
+  }, [sourceSpeeds, directResults.length])
 
   const fetchDirectSearch = useCallback(async (keyword: string, page: number = 1) => {
     if (!keyword || selectedAPIs.length === 0) return
@@ -70,13 +83,20 @@ export function useDirectSearch() {
     // 根据缓存判断哪些源需要跳过
     const cachedSources = sourcePaginationCacheRef.current
     const sourcesToFetch = getSourcesToFetch(selectedAPIs, cachedSources, page)
-    const totalRequestedSources = sourcesToFetch.length
 
     // 保存当前页需要请求的源列表
     sourcesToFetchRef.current = sourcesToFetch
+
+    // 后台测速（不 await，不拖慢搜索）：store 每测完一个源增量发布，
+    // 本 hook 的 useEffect 重排 + 组件速度标签由订阅即时响应
+    useSourceSpeedStore.getState().ensure(sourcesToFetch)
+    // 本页进度分母：全缓存命中时按全部源计
+    totalForPageRef.current =
+      sourcesToFetch.length > 0 ? sourcesToFetch.length : selectedAPIs.length
     if (sourcesToFetch.length === 0) {
+      // 全部源命中分页缓存：直接标记完成（进度派生后即 100%）
+      setCompletedSourcesInCurrentPage(new Set(selectedAPIs.map(source => source.id)))
       setDirectLoading(false)
-      setSearchProgress({ completed: selectedAPIs.length, total: selectedAPIs.length })
       setHasMore(false)
       if (timeOutTimer.current) {
         clearTimeout(timeOutTimer.current)
@@ -84,7 +104,6 @@ export function useDirectSearch() {
       }
       return
     }
-    setSearchProgress({ completed: 0, total: totalRequestedSources })
 
     if (timeOutTimer.current) {
       clearTimeout(timeOutTimer.current)
@@ -102,10 +121,7 @@ export function useDirectSearch() {
           })
           return newSet
         })
-        setSearchProgress({
-          completed: totalRequestedSources,
-          total: totalRequestedSources,
-        })
+        // 进度由 completedSourcesInCurrentPage 派生，无需在此更新
       }
       timeOutTimer.current = null
     }, PaginationConfig.maxRequestTimeout)
@@ -125,13 +141,7 @@ export function useDirectSearch() {
           setCompletedSourcesInCurrentPage(prev => {
             // 避免重复添加
             if (prev.has(sourceId)) return prev
-            const newSet = new Set([...prev, sourceId])
-            // 实时更新搜索进度
-            setSearchProgress({
-              completed: newSet.size,
-              total: totalRequestedSources,
-            })
-            return newSet
+            return new Set([...prev, sourceId])
           })
         }
       }
@@ -156,7 +166,10 @@ export function useDirectSearch() {
       }
 
       setDirectResults(prev => {
-        return appendUniqueVideoItems(prev, event.items, seenResultKeysRef.current)
+        const merged = appendUniqueVideoItems(prev, event.items, seenResultKeysRef.current)
+        // 速度表已就绪（暖缓存/前序测速）→ 每事件重排（幂等）；冷启动只追加，由速度订阅重排
+        const entries = useSourceSpeedStore.getState().entries
+        return entries.size > 0 ? sortResultsBySourceSpeed(merged, entries) : merged
       })
 
       // 记录成功返回结果的源（有结果的源才算成功）
@@ -218,12 +231,6 @@ export function useDirectSearch() {
           setHasMore(false)
         }
 
-        // Progress update
-        setSearchProgress({
-          completed: totalRequestedSources,
-          total: totalRequestedSources,
-        })
-
         if (allResults.length === 0 && page === 1) {
           setHasMore(false)
         }
@@ -241,10 +248,6 @@ export function useDirectSearch() {
             newSet.add(source.id)
           })
           return newSet
-        })
-        setSearchProgress({
-          completed: totalRequestedSources,
-          total: totalRequestedSources,
         })
 
         unsubResult()
@@ -272,7 +275,6 @@ export function useDirectSearch() {
 
   const clearDirectSearchState = useCallback(() => {
     setDirectResults([])
-    setSearchProgress({ completed: 0, total: 0 })
     setCmsPagination({
       page: 1,
       totalPages: 0,
@@ -294,6 +296,15 @@ export function useDirectSearch() {
       requestVersionRef.current = 0
     }
   }, [abortDirectSearch, clearDirectSearchState])
+
+  // 搜索进度由「已完成源集合」派生，不再单独维护 state
+  const searchProgress = useMemo(
+    () => ({
+      completed: completedSourcesInCurrentPage.size,
+      total: totalForPageRef.current,
+    }),
+    [completedSourcesInCurrentPage],
+  )
 
   // 计算当前页是否已完成（所有源都已返回）
   const isCurrentPageComplete = useMemo(() => {
@@ -317,6 +328,5 @@ export function useDirectSearch() {
     startDirectSearch: fetchDirectSearch,
     abortDirectSearch,
     clearDirectSearchState,
-    setDirectResults,
   }
 }

@@ -1,3 +1,4 @@
+import { useCallback, useMemo, useRef } from 'react'
 import type { VideoItem } from '@ouonnki/cms-core'
 import { MediaPosterCard } from '@/shared/components/common/MediaPosterCard'
 import { NoResultIcon } from '@/shared/components/icons'
@@ -8,6 +9,8 @@ import { useWindowedGrid } from '@/shared/hooks/useWindowedGrid'
 import { getSourceColorScheme } from '@/shared/lib/source-colors'
 import { SourceStatusBadge } from './SourceStatusBadge'
 import { buildCmsPlayPath } from '@/shared/lib/routes'
+import { useFlipLayout } from '@/shared/hooks/useFlipLayout'
+import { formatSpeed, useSourceSpeedStore } from '../lib/sourceSpeed'
 
 interface SearchResultsGridProps {
   /** 直连搜索结果 */
@@ -89,15 +92,51 @@ export function SearchResultsGrid({
   sentinelRef,
   className,
 }: SearchResultsGridProps) {
-  const results = directResults
-  const hasResults = results.length > 0
+  const hasResults = directResults.length > 0
   const virtualGrid = useWindowedGrid({
-    items: results,
+    items: directResults,
     minItems: MIN_VIRTUALIZED_ITEMS,
     breakpoints: GRID_BREAKPOINTS,
     estimateItemHeight: estimatePosterRowHeight,
     gap: GRID_ROW_GAP,
     overscanRows: VIRTUAL_OVERSCAN_ROWS,
+  })
+
+  // 各源测速结果：store 订阅，测速条目增量到达时自动更新标签
+  const sourceSpeeds = useSourceSpeedStore(state => state.entries)
+
+  // 重排 FLIP v2：零测量（位置由序位 + 布局推算）+ 弹性补位
+  const gridRef = useRef<HTMLDivElement | null>(null)
+  const calibCacheRef = useRef<{ layoutKey: string; rowHeight: number; gap: number } | null>(null)
+  // 只保留渲染为卡片（有 source_code/vod_id）的项，保证公式 index 与实际 grid cell 一一对应
+  const keys = useMemo(
+    () =>
+      directResults
+        .filter(result => result.source_code && result.vod_id)
+        .map(result => `${result.source_code}-${result.vod_id}`),
+    [directResults],
+  )
+  // 行距校准：每次布局一次（1 次 offsetHeight + 1 次 computed style），失败回退估计值
+  const calibrate = useCallback(() => {
+    const grid = gridRef.current
+    const first = grid?.firstElementChild as HTMLElement | null
+    if (!grid || !first) return null
+    const layoutKey = `${virtualGrid.columns}:${Math.round(virtualGrid.containerWidth)}`
+    if (calibCacheRef.current?.layoutKey === layoutKey) {
+      return calibCacheRef.current
+    }
+    const rowGap = parseFloat(getComputedStyle(grid).rowGap || String(GRID_ROW_GAP))
+    const calibrated = { layoutKey, rowHeight: first.offsetHeight + rowGap, gap: rowGap }
+    calibCacheRef.current = calibrated
+    return calibrated
+  }, [virtualGrid.columns, virtualGrid.containerWidth])
+  const bindFlipRef = useFlipLayout(keys, {
+    columns: virtualGrid.columns,
+    columnWidth: virtualGrid.columnWidth,
+    rowHeight: virtualGrid.rowHeight,
+    gap: GRID_ROW_GAP,
+    minVirtualizedItems: MIN_VIRTUALIZED_ITEMS,
+    calibrate,
   })
 
   return (
@@ -107,7 +146,7 @@ export function SearchResultsGrid({
         {/* 左侧：结果统计 */}
         {hasResults && (
           <div className="text-muted-foreground text-sm">
-            共找到 <span className="text-primary font-medium">{totalResults || results.length}</span> 个结果
+            共找到 <span className="text-primary font-medium">{totalResults || directResults.length}</span> 个结果
           </div>
         )}
         {/* 右侧：源状态徽章 */}
@@ -116,7 +155,7 @@ export function SearchResultsGrid({
             completed={searchProgress.completed}
             total={searchProgress.total}
             successfulSources={successfulSources}
-            resultsCount={results.length}
+            resultsCount={directResults.length}
             loading={loading}
           />
         )}
@@ -133,37 +172,48 @@ export function SearchResultsGrid({
         ) : hasResults ? (
           <div ref={virtualGrid.containerRef}>
             {virtualGrid.topPadding > 0 && <div style={{ height: virtualGrid.topPadding }} />}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
-              {virtualGrid.visibleItems.map(({ item, index }) => {
-              if (!item.source_code || !item.vod_id) {
-                return null
-              }
+            <div
+              ref={gridRef}
+              className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8"
+            >
+              {virtualGrid.visibleItems.map(({ item }) => {
+                if (!item.source_code || !item.vod_id) {
+                  return null
+                }
 
-              // 根据源代码生成配色方案
-              const colorScheme = item.source_code
-                ? getSourceColorScheme(item.source_code)
-                : undefined
+                // 根据源代码生成配色方案
+                const colorScheme = getSourceColorScheme(item.source_code)
+                // 来源站速度（右上角角标下方的小标签）
+                const speedEntry = sourceSpeeds.get(item.source_code)
+                const speedLabel =
+                  speedEntry?.ok && speedEntry.throughputMBps !== null
+                    ? formatSpeed(speedEntry.throughputMBps)
+                    : undefined
 
-              return (
-                <div key={`${item.source_code}-${item.vod_id}-${index}`}>
-                  <MediaPosterCard
-                    to={buildCmsPlayPath(item.source_code, item.vod_id)}
-                    posterUrl={item.vod_pic || null}
-                    title={item.vod_name}
-                    year={item.vod_year}
-                    topRightLabel={item.source_name}
-                    topRightLabelColorScheme={colorScheme}
-                    rating={
-                      item.vod_douban_score !== undefined
-                        ? typeof item.vod_douban_score === 'number'
-                          ? item.vod_douban_score
-                          : parseFloat(item.vod_douban_score)
-                        : undefined
-                    }
-                  />
-                </div>
-              )
-            })}
+                // 稳定 key：渲染集合内 (source_code, vod_id) 唯一
+                const cardKey = `${item.source_code}-${item.vod_id}`
+
+                return (
+                  <div key={cardKey} ref={bindFlipRef(cardKey)}>
+                    <MediaPosterCard
+                      to={buildCmsPlayPath(item.source_code, item.vod_id)}
+                      posterUrl={item.vod_pic || null}
+                      title={item.vod_name}
+                      year={item.vod_year}
+                      topRightLabel={item.source_name}
+                      topRightLabelColorScheme={colorScheme}
+                      topRightSecondaryLabel={speedLabel}
+                      rating={
+                        item.vod_douban_score !== undefined
+                          ? typeof item.vod_douban_score === 'number'
+                            ? item.vod_douban_score
+                            : parseFloat(item.vod_douban_score)
+                          : undefined
+                      }
+                    />
+                  </div>
+                )
+              })}
             </div>
             {virtualGrid.bottomPadding > 0 && (
               <div style={{ height: virtualGrid.bottomPadding }} />

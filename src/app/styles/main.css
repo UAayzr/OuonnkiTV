@@ -826,6 +826,25 @@ html.dark.theme-lavender {
   }
 }
 
+/*
+ * 搜索结果速度标签弹性浮现：从角标下方轻微弹出，84% 处过冲回弹
+ * （项目入场 keyframes 的惯例过冲），配合 --motion-duration-pop 与 soft-rebound 缓动。
+ */
+@keyframes speed-tag-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  84% {
+    opacity: 1;
+    transform: scale(1.02) translateY(1px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* 自绘控制条接管播放器交互：隐藏 Artplayer 默认控制条 */
 .art-video-player .art-controls {
   display: none !important;
@@ -938,4 +957,26 @@ html.dark.theme-lavender {
 .oki-player-controls,
 .oki-player-overlay {
   --primary-foreground: color-mix(in oklab, var(--primary) 20%, white);
+}
+
+/*
+ * FLIP 飞行期(useFlipLayout 契约):卡片重排动画期间挂在 wrapper 上的类。
+ * - 抑制掉帧根因:卡片内 backdrop-blur-sm 每帧重栅格化 → 飞行期移除;
+ * - 抑制内层 hover/active 双层位移(v4 走独立 translate/scale 属性,与 FLIP 的 transform 正交但叠加噪音);
+ * - 飞行中禁止点击(dnd-kit 拖拽排序惯例,防误触);
+ * - 上升卡(lead)抬升压盖同列对穿时的让位卡。
+ */
+.flip-flight {
+  pointer-events: none;
+}
+.flip-flight [class~='backdrop-blur-sm'] {
+  backdrop-filter: none;
+}
+.flip-flight .group {
+  translate: none;
+  scale: none;
+}
+.flip-flight--lead {
+  position: relative;
+  z-index: 1;
 }

@@ -118,6 +118,7 @@ export function useWindowedGrid<T>({
       return {
         shouldVirtualize,
         columns,
+        columnWidth,
         rowHeight,
         rowCount,
         topPadding: 0,
@@ -136,6 +137,7 @@ export function useWindowedGrid<T>({
     return {
       shouldVirtualize,
       columns,
+      columnWidth,
       rowHeight,
       rowCount,
       topPadding: startRow * rowHeight,
@@ -148,6 +150,7 @@ export function useWindowedGrid<T>({
 
   return {
     containerRef,
+    containerWidth: virtualState.containerWidth,
     ...virtualGrid,
   }
 }

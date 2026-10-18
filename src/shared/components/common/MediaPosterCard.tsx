@@ -21,6 +21,8 @@ interface MediaPosterCardProps {
   topRightLabel?: string
   /** 右上角标签配色方案（不传则使用默认黄色） */
   topRightLabelColorScheme?: SourceColorScheme
+  /** 右上角次级标签（显示在 topRightLabel 正下方，如源速度） */
+  topRightSecondaryLabel?: string
   /** 评分 (0-10) - 显示在右下角 */
   rating?: number
 }
@@ -38,6 +40,7 @@ export function MediaPosterCard({
   year,
   topRightLabel,
   topRightLabelColorScheme,
+  topRightSecondaryLabel,
   rating,
 }: MediaPosterCardProps) {
   const [imageFailed, setImageFailed] = useState(false)
@@ -87,12 +90,25 @@ export function MediaPosterCard({
               </div>
             )}
 
-            {topRightLabel && (
-              <div
-                className="absolute right-0 top-0 rounded-bl-md rounded-tr-lg px-2 py-0.5 text-[10px] font-medium shadow-sm transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:-translate-y-1 group-hover:opacity-0"
-                style={labelStyle}
-              >
-                {topRightLabel}
+            {/* 右上角标签组：主标签 + 次级标签（如源速度）自然堆叠，右缘对齐 */}
+            {(topRightLabel || topRightSecondaryLabel) && (
+              <div className="absolute right-0 top-0 flex flex-col items-end">
+                {topRightLabel && (
+                  <div
+                    className="rounded-bl-md rounded-tr-lg px-2 py-0.5 text-[10px] font-medium shadow-sm transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] group-hover:-translate-y-1 group-hover:opacity-0"
+                    style={labelStyle}
+                  >
+                    {topRightLabel}
+                  </div>
+                )}
+
+                {topRightSecondaryLabel && (
+                  <div
+                    className="rounded-bl-md rounded-tr-lg bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90 shadow-sm backdrop-blur-sm transition-[opacity,transform] duration-[var(--motion-duration-panel)] ease-[var(--motion-ease-soft-rebound)] animate-[speed-tag-in_var(--motion-duration-pop)_var(--motion-ease-soft-rebound)_both] group-hover:-translate-y-1 group-hover:opacity-0 motion-reduce:animate-none"
+                  >
+                    {topRightSecondaryLabel}
+                  </div>
+                )}
               </div>
             )}
 
