@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CmsClient, DetailResult, VideoSource } from '@ouonnki/cms-core'
+import { cacheDetailResult, getCachedDetail, prefetchCmsDetail } from '@/shared/lib/detailCache'
 
 interface UsePlayerDetailParams {
   cmsClient: CmsClient
@@ -63,6 +64,18 @@ export function usePlayerDetail({
       if (hasLoadedCurrentDetail) return
 
       if (!canCommit()) return
+
+      // 缓存优先：列表页 hover/点击已预取,或本会话看过,直接呈现
+      const cached = getCachedDetail(sourceCode, vodId)
+      if (cached) {
+        loadedDetailKeyRef.current = detailRequestKey
+        setDetail(cached)
+        setError(null)
+        setLoading(false)
+        setIsDetailRefreshing(false)
+        return
+      }
+
       if (detailRef.current) setIsDetailRefreshing(true)
       else setLoading(true)
       setError(null)
@@ -72,9 +85,12 @@ export function usePlayerDetail({
           throw new Error('未找到对应视频源配置，请检查源设置')
         }
 
-        const response = await cmsClient.getDetail(vodId, sourceConfig)
+        // 与列表页预取共用 in-flight 去重,避免重复请求
+        let response = await prefetchCmsDetail(sourceCode, vodId)
+        if (!response) response = await cmsClient.getDetail(vodId, sourceConfig)
         if (!canCommit()) return
         if (response.success && response.episodes && response.episodes.length > 0) {
+          cacheDetailResult(sourceCode, vodId, response)
           loadedDetailKeyRef.current = detailRequestKey
           setDetail(response)
           setError(null)

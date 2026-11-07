@@ -11,6 +11,8 @@ interface SeekBarProps {
   bufferedRanges: BufferedRange[]
   /** 播放 URL；提供时启用真帧预览（懒创建抓帧器） */
   src?: string
+  /** 代理前缀：预览器也走 /proxy 中转,与主播放器共用服务端分片缓存 */
+  previewProxyUrl?: string
   /** 抓帧失败时的回退封面 */
   coverUrl?: string
   onSeek: (time: number) => void
@@ -41,6 +43,7 @@ export function SeekBar({
   duration,
   bufferedRanges,
   src,
+  previewProxyUrl,
   coverUrl,
   onSeek,
   onScrubChange,
@@ -70,7 +73,9 @@ export function SeekBar({
 
     creatingPreviewerRef.current = (async () => {
       try {
-        const previewer = await createFramePreviewer(src)
+        const previewer = await createFramePreviewer(src, {
+          ...(previewProxyUrl ? { proxyUrl: previewProxyUrl } : {}),
+        })
         previewerRef.current = previewer
         return previewer
       } catch {
@@ -83,7 +88,7 @@ export function SeekBar({
     } finally {
       creatingPreviewerRef.current = null
     }
-  }, [src])
+  }, [previewProxyUrl, src])
 
   const scheduleIdleDestroy = useCallback(() => {
     if (idleTimerRef.current) {

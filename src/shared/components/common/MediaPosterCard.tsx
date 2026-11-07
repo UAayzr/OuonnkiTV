@@ -1,7 +1,12 @@
 import { Play } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router'
 import { AspectRatio } from '@/shared/components/ui/aspect-ratio'
+import { normalizeProxyPrefix } from '@/shared/config/api.config'
+import { prefetchCmsDetail } from '@/shared/lib/detailCache'
+import { warmPlaybackChain } from '@/shared/lib/playbackWarmup'
+import { parseCmsPlayPath } from '@/shared/lib/routes'
+import { useSettingStore } from '@/shared/store/settingStore'
 import type { SourceColorScheme } from '@/shared/lib/source-colors'
 
 interface MediaPosterCardProps {
@@ -45,10 +50,58 @@ export function MediaPosterCard({
 }: MediaPosterCardProps) {
   const [imageFailed, setImageFailed] = useState(false)
   const posterSrc = !imageFailed && posterUrl ? posterUrl : undefined
+  const hoverTimerRef = useRef<number | null>(null)
+
+  /* 代理前缀来自设置(用户可自定义 proxyUrl / 关闭代理),不能写死默认值;
+     normalizeProxyPrefix 对空输入会回退默认前缀,故「关闭」分支必须显式给 null */
+  const { network } = useSettingStore()
+  const playbackProxyUrl = network.isProxyEnabled
+    ? normalizeProxyPrefix(network.proxyUrl)
+    : null
 
   useEffect(() => {
     setImageFailed(false)
   }, [posterUrl])
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current !== null) {
+        window.clearTimeout(hoverTimerRef.current)
+      }
+    }
+  }, [])
+
+  /**
+   * 播放路径预取:点击立即拉取详情进缓存;hover(200ms 防抖,防轮播扫过触发风暴)
+   * 再追加暖链——进播放页时 detail/master/首段分片全链命中服务端缓存。
+   * 失败静默,绝不干扰导航。
+   */
+  const prefetchOnNavigate = (fireWarmup: boolean) => {
+    const parsed = parseCmsPlayPath(to)
+    if (!parsed) return
+    void prefetchCmsDetail(parsed.sourceCode, parsed.vodId).then(cachedDetail => {
+      // 代理未开启时暖链无意义(详情/播放都不走代理,缓存没人消费),仅预取详情
+      if (!fireWarmup || !cachedDetail || !playbackProxyUrl) return
+      const firstEpisodeUrl = cachedDetail.episodes[0]
+      if (firstEpisodeUrl) {
+        void warmPlaybackChain(firstEpisodeUrl, playbackProxyUrl)
+      }
+    })
+  }
+
+  const handlePointerEnter = () => {
+    if (hoverTimerRef.current !== null) {
+      window.clearTimeout(hoverTimerRef.current)
+    }
+    hoverTimerRef.current = window.setTimeout(() => prefetchOnNavigate(true), 200)
+  }
+
+  const handleClick = () => {
+    if (hoverTimerRef.current !== null) {
+      window.clearTimeout(hoverTimerRef.current)
+    }
+    prefetchOnNavigate(false)
+  }
 
   // 使用自定义配色或默认配色
   const labelColor = topRightLabelColorScheme || { bg: '250, 204, 21', text: '120, 53, 15' } // yellow-400 和 amber-950 的 RGB 值
@@ -59,7 +112,12 @@ export function MediaPosterCard({
     color: `rgb(${labelColor.text})`,
   }
   return (
-    <NavLink to={to} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+    <NavLink
+      to={to}
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      onClick={handleClick}
+      onPointerEnter={handlePointerEnter}
+    >
       <div className="group cursor-pointer transition-transform duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] hover:-translate-y-px active:translate-y-0 active:scale-[0.988] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100">
         {/* 海报卡片 */}
         <div className="relative overflow-hidden rounded-lg bg-muted shadow-sm transition-[box-shadow,transform] duration-[var(--motion-duration-pop)] ease-[var(--motion-ease-soft-rebound)] group-hover:shadow-lg group-hover:shadow-black/10">

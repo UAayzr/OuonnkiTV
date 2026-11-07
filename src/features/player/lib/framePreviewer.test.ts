@@ -1,16 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock hls.js light 模块（framePreviewer 动态 import）
-const fakeHlsInstances: { loadSource: ReturnType<typeof vi.fn>; attachMedia: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }[] = []
+class FakeDefaultLoader {
+  load = vi.fn()
+}
+
+const fakeHlsInstances: {
+  config: Record<string, unknown>
+  loadSource: ReturnType<typeof vi.fn>
+  attachMedia: ReturnType<typeof vi.fn>
+  destroy: ReturnType<typeof vi.fn>
+}[] = []
 
 vi.mock('hls.js/dist/hls.light.mjs', () => ({
   default: class FakeHls {
     static isSupported = () => true
+    static DefaultConfig = { loader: FakeDefaultLoader }
     loadSource = vi.fn()
     attachMedia = vi.fn()
     destroy = vi.fn()
-    constructor() {
-      fakeHlsInstances.push(this)
+    constructor(config: Record<string, unknown>) {
+      fakeHlsInstances.push({
+        config,
+        loadSource: this.loadSource,
+        attachMedia: this.attachMedia,
+        destroy: this.destroy,
+      })
     }
   },
 }))
@@ -88,9 +103,33 @@ describe('framePreviewer', () => {
       'https://cdn.example.com/stream/index.m3u8',
     )
     expect(fakeHlsInstances[0].attachMedia).toHaveBeenCalledWith(createdVideo)
+    // 未传 proxyUrl:零配置实例,无 loader 注入
+    expect(fakeHlsInstances[0].config).toBeUndefined()
 
     previewer.destroy()
     expect(fakeHlsInstances[0].destroy).toHaveBeenCalled()
+  })
+
+  it('传 proxyUrl 时注入代理重写 loader,分片 URL 被中转', async () => {
+    const previewer = await createFramePreviewer('https://cdn.example.com/stream/index.m3u8', {
+      proxyUrl: '/proxy?url=',
+    })
+    expect(fakeHlsInstances).toHaveLength(1)
+    expect(fakeHlsInstances[0].config.loader).toBeDefined()
+
+    // loader 内重写分片 URL 为代理前缀
+    const loaderInstance = new (fakeHlsInstances[0].config.loader as unknown as new () => { load: (c: unknown, l: unknown, cb: unknown) => void })()
+    const context = { url: 'https://cdn.example.com/stream/seg.ts', type: 'frag' }
+    ;(loaderInstance as { load: (c: unknown, l: unknown, cb: unknown) => void }).load(
+      context,
+      {},
+      { onSuccess: () => {} },
+    )
+    expect(context.url).toBe(
+      `/proxy?url=${encodeURIComponent('https://cdn.example.com/stream/seg.ts')}`,
+    )
+
+    previewer.destroy()
   })
 
   it('就绪且有画面尺寸时 capture 返回一帧', async () => {

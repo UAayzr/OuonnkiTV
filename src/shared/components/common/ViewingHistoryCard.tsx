@@ -4,6 +4,7 @@ import { NavLink } from 'react-router'
 import { AspectRatio } from '@/shared/components/ui/aspect-ratio'
 import { Checkbox } from '@/shared/components/ui/checkbox'
 import { Progress } from '@/shared/components/ui/progress'
+import { prefetchCmsDetail } from '@/shared/lib/detailCache'
 import { cn } from '@/shared/lib/utils'
 import { buildHistoryPlayPath } from '@/shared/lib/viewingHistory'
 import type { ViewingHistoryItem } from '@/shared/types'
@@ -66,6 +67,9 @@ export function ViewingHistoryCard({
   }
 
   const handleCardClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    // 点击立即预取详情进缓存(播放页挂载时命中,跳过重拉);竞态由 in-flight 去重兜底
+    void prefetchCmsDetail(item.sourceCode, item.vodId)
+
     if (!selectionMode) return
     event.preventDefault()
     handleSelect()

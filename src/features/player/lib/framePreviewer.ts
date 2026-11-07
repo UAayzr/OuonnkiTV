@@ -1,4 +1,6 @@
 import type Hls from 'hls.js'
+import { createHlsLoaderClass } from '@ouonnki/cms-core/m3u8'
+import { wrapPlaybackUrl } from '@/shared/lib/playbackUrl'
 
 type HlsConstructor = typeof import('hls.js')['default']
 
@@ -34,10 +36,35 @@ const getHlsConstructor = (): Promise<HlsConstructor> => {
 }
 
 /**
+ * 预览器 loader：可选注入 URL 重写（代理中转，与主播放器共用服务端分片缓存）。
+ * 注意预览器不做广告过滤文本处理（m3u8Processor 传 null）。
+ */
+let previewerLoaderKey = ''
+let previewerLoaderClass: ReturnType<typeof createHlsLoaderClass> | null = null
+
+const getPreviewerLoaderClass = (HlsClass: HlsConstructor, proxyUrl?: string) => {
+  const key = proxyUrl || ''
+  if (!previewerLoaderClass || previewerLoaderKey !== key) {
+    previewerLoaderKey = key
+    previewerLoaderClass = createHlsLoaderClass({
+      m3u8Processor: null,
+      ...(proxyUrl ? { urlTransformer: url => wrapPlaybackUrl(url, proxyUrl) } : {}),
+      Hls: HlsClass,
+    })
+  }
+  return previewerLoaderClass
+}
+
+/**
  * 创建真帧预览器：用隐藏 `<video>`（m3u8 走独立 hls.js 实例，其余走原生）在目标
  * 时间 seek 后通过 canvas 抓帧。调用方负责懒创建与闲置销毁。
+ * @param options.proxyUrl 代理前缀：启用后预览器的清单/分片也走 /proxy 中转,
+ *   与主播放器共用服务端缓存（预览器 seek 的区域即时暖链）。
  */
-export async function createFramePreviewer(url: string): Promise<FramePreviewer> {
+export async function createFramePreviewer(
+  url: string,
+  options?: { proxyUrl?: string },
+): Promise<FramePreviewer> {
   const video = document.createElement('video')
   video.muted = true
   video.playsInline = true
@@ -57,7 +84,9 @@ export async function createFramePreviewer(url: string): Promise<FramePreviewer>
     try {
       const HlsClass = await getHlsConstructor()
       if (HlsClass.isSupported()) {
-        hls = new HlsClass()
+        hls = options?.proxyUrl
+          ? new HlsClass({ loader: getPreviewerLoaderClass(HlsClass, options.proxyUrl) })
+          : new HlsClass()
         hls.loadSource(url)
         hls.attachMedia(video)
       } else {

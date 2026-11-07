@@ -26,6 +26,8 @@ interface PlayerControlsProps {
   visible: boolean
   /** 播放 URL，供进度条真帧预览 */
   src?: string
+  /** 代理前缀：真帧预览器走 /proxy 中转,与主播放器共用服务端缓存 */
+  previewProxyUrl?: string
   coverUrl?: string
   /** 顶部标题 */
   title?: string
@@ -333,6 +335,7 @@ export function PlayerControls({
   art,
   visible,
   src,
+  previewProxyUrl,
   coverUrl,
   title,
   sourceName,
@@ -464,6 +467,7 @@ export function PlayerControls({
               duration={state.duration}
               bufferedRanges={state.bufferedRanges}
               src={src}
+              previewProxyUrl={previewProxyUrl}
               coverUrl={coverUrl}
               onSeek={handleSeek}
               onScrubChange={time => onInteractingChange?.(time !== null)}

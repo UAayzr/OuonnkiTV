@@ -1,9 +1,32 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import { ConfirmModal } from './ConfirmModal'
 import { MediaPosterCard } from './MediaPosterCard'
+
+const prefetchMock = vi.hoisted(() => vi.fn(async () => undefined))
+const warmChainMock = vi.hoisted(() => vi.fn(async () => true))
+const networkSettingsMock = vi.hoisted(() => ({
+  isProxyEnabled: true,
+  proxyUrl: 'https://my-proxy.example/proxy?url=',
+}))
+
+vi.mock('@/shared/lib/detailCache', async original => {
+  const actual = await original<typeof import('@/shared/lib/detailCache')>()
+  return {
+    ...actual,
+    prefetchCmsDetail: prefetchMock,
+  }
+})
+
+vi.mock('@/shared/lib/playbackWarmup', () => ({
+  warmPlaybackChain: warmChainMock,
+}))
+
+vi.mock('@/shared/store/settingStore', () => ({
+  useSettingStore: () => ({ network: networkSettingsMock }),
+}))
 
 describe('通用卡片和确认弹窗', () => {
   it('海报卡片显示信息，图片失败后显示占位内容', () => {
@@ -51,6 +74,82 @@ describe('通用卡片和确认弹窗', () => {
     // 弹性浮现动画 + 无障碍降级
     expect(label.className).toContain('speed-tag-in')
     expect(label.className).toContain('motion-reduce:animate-none')
+  })
+
+  it('播放路径卡片点击时预取详情(非播放路径不预取)', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <MediaPosterCard to="/play/cms/source1/85265" posterUrl={null} title="影片A" />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByText('影片A'))
+    await waitFor(() => {
+      expect(prefetchMock).toHaveBeenCalledWith('source1', '85265')
+    })
+  })
+
+  it('非播放路径不触发预取', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <MediaPosterCard to="/settings" posterUrl={null} title="设置入口" />
+      </MemoryRouter>,
+    )
+    await user.click(screen.getByText('设置入口'))
+    await waitFor(() => {
+      expect(prefetchMock).not.toHaveBeenCalled()
+    })
+  })
+
+  it('hover 暖链使用设置里的自定义代理前缀', async () => {
+    prefetchMock.mockResolvedValue({
+      success: true,
+      episodes: ['https://cdn.example.com/e1.m3u8'],
+    } as never)
+    networkSettingsMock.isProxyEnabled = true
+    networkSettingsMock.proxyUrl = 'https://my-proxy.example/proxy?url='
+
+    render(
+      <MemoryRouter>
+        <MediaPosterCard to="/play/cms/source1/85265" posterUrl={null} title="影片B" />
+      </MemoryRouter>,
+    )
+    fireEvent.pointerEnter(screen.getByText('影片B'))
+    // hover 有 200ms 防抖,等待防抖与预取 promise 链
+    await waitFor(
+      () => {
+        expect(warmChainMock).toHaveBeenCalledWith(
+          'https://cdn.example.com/e1.m3u8',
+          'https://my-proxy.example/proxy?url=',
+        )
+      },
+      { timeout: 2000 },
+    )
+  })
+
+  it('代理关闭时 hover 不暖链(详情预取仍执行)', async () => {
+    prefetchMock.mockResolvedValue({
+      success: true,
+      episodes: ['https://cdn.example.com/e1.m3u8'],
+    } as never)
+    networkSettingsMock.isProxyEnabled = false
+    warmChainMock.mockClear()
+
+    render(
+      <MemoryRouter>
+        <MediaPosterCard to="/play/cms/source1/85265" posterUrl={null} title="影片C" />
+      </MemoryRouter>,
+    )
+    fireEvent.pointerEnter(screen.getByText('影片C'))
+    await waitFor(
+      () => {
+        expect(prefetchMock).toHaveBeenCalledWith('source1', '85265')
+      },
+      { timeout: 2000 },
+    )
+    await new Promise(resolve => setTimeout(resolve, 100))
+    expect(warmChainMock).not.toHaveBeenCalled()
   })
 
   it('确认弹窗能取消并确认操作', async () => {

@@ -16,3 +16,11 @@ export {
   createM3u8LoaderCallback,
   type HlsLoaderConfig,
 } from './hls-loader'
+
+export {
+  clearFragmentPrefetch,
+  configureFragmentPrefetch,
+  ensurePrefetchWindow,
+  getFragmentPrefetchStats,
+  prefetchFragment,
+} from './fragment-prefetch'

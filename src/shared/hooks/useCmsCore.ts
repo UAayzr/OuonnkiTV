@@ -15,7 +15,11 @@ import { normalizeProxyPrefix } from '@/shared/config/api.config'
 let globalClient: CmsClient | null = null
 let globalNetworkKey: string | null = null
 
-function getCmsClient(config?: CmsClientConfig): CmsClient {
+/**
+ * 获取全局单例 CmsClient(非 Hook 版,供预取等非组件上下文使用)。
+ * 网络设置变化时重建单例;hook 版 useCmsClient 依赖同一份实现。
+ */
+export function getCmsClient(config?: CmsClientConfig): CmsClient {
   const { network } = useSettingStore.getState()
   const normalizedProxyUrl = normalizeProxyPrefix(network.proxyUrl)
   const networkKey = [

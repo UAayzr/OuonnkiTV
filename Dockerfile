@@ -52,7 +52,7 @@ RUN apk add --no-cache nginx supervisor && \
     rm -rf /var/cache/apk/*
 
 # 创建必要的目录
-RUN mkdir -p /run/nginx /var/log/supervisor /app
+RUN mkdir -p /run/nginx /var/log/supervisor /app /data/proxy-cache
 
 # 设置工作目录
 WORKDIR /app

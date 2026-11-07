@@ -43,6 +43,10 @@ vi.mock('@/shared/store/apiStore', () => ({
 }))
 vi.mock('@/shared/store/settingStore', () => ({
   useSettingStore: () => ({
+    network: {
+      isProxyEnabled: false,
+      proxyUrl: '/proxy?url=',
+    },
     playback: {
       defaultEpisodeOrder: 'asc',
       isViewingHistoryVisible: true,

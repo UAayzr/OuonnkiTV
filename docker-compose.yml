@@ -15,6 +15,17 @@ services:
       - OKI_ACCESS_PASSWORD=${OKI_ACCESS_PASSWORD:-}
       - OKI_DISABLE_ANALYTICS=${OKI_DISABLE_ANALYTICS:-true}
       - OKI_INITIAL_CONFIG=${OKI_INITIAL_CONFIG:-}
+      # 播放加速:代理缓存目录(磁盘 LRU,ts 分片/清单/详情 JSON 复用)
+      - PROXY_CACHE_DIR=/data/proxy-cache
+      # TTL(秒):详情 JSON 10min / 清单 15min / 分片 7 天,均可按需覆盖
+      - PROXY_CACHE_TTL_JSON=600
+      - PROXY_CACHE_TTL_M3U8=900
+      - PROXY_CACHE_TTL_TS=604800
+      # 分片缓存上限:约 2GB / 1500 条(覆盖一部完整电影+多部剧集复看)
+      - PROXY_CACHE_MAX_BYTES=2147483648
+      - PROXY_CACHE_TS_MAX_ENTRIES=1500
+    volumes:
+      - ouonnkitv-proxy-cache:/data/proxy-cache
     restart: unless-stopped
     container_name: ouonnkitv-dev
 
@@ -39,3 +50,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+volumes:
+  ouonnkitv-proxy-cache:
