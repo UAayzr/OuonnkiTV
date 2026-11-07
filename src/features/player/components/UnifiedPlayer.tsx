@@ -11,8 +11,6 @@ import { cn } from '@/shared/lib/utils'
 import { useApiStore } from '@/shared/store/apiStore'
 import { useSettingStore } from '@/shared/store/settingStore'
 import { useViewingHistoryStore } from '@/shared/store/viewingHistoryStore'
-import { normalizeProxyPrefix } from '@/shared/config/api.config'
-import { warmNextEpisodeMaster } from '@/shared/lib/playbackWarmup'
 import { buildCmsPlayPath } from '@/shared/lib/routes'
 import type { VideoItem } from '@/shared/types'
 import { useFavoritesStore } from '@/features/favorites/store/favoritesStore'
@@ -77,14 +75,8 @@ export default function UnifiedPlayer() {
   const cmsClient = useCmsClient()
   const { videoAPIs, adFilteringEnabled } = useApiStore()
   const { addViewingHistory, viewingHistory } = useViewingHistoryStore()
-  const { network, playback } = useSettingStore()
+  const { playback } = useSettingStore()
   const toggleCmsFavorite = useFavoritesStore(state => state.toggleCmsFavorite)
-
-  /* 播放链路代理开关:与详情代理共用 isProxyEnabled(语义连贯,不新增 UI 设置)。
-     normalizeProxyPrefix 对空输入会回退默认前缀,故「关闭」分支必须显式给 null */
-  const playbackProxyUrl = network.isProxyEnabled
-    ? normalizeProxyPrefix(network.proxyUrl)
-    : null
 
   const routeValidation = useMemo(
     () =>
@@ -238,14 +230,6 @@ export default function UnifiedPlayer() {
     sourceConfig,
   })
 
-  // 切集预热:提前把下一集 master 清单拉进服务端缓存,切集时零回源等待
-  useEffect(() => {
-    if (!detail?.episodes || !playbackProxyUrl) return
-    const nextUrl = detail.episodes[selectedEpisode + 1]
-    if (!nextUrl) return
-    void warmNextEpisodeMaster(nextUrl, playbackProxyUrl)
-  }, [detail, playbackProxyUrl, selectedEpisode])
-
   const buildCurrentPlayPath = useCallback(
     (episodeIndex: number) => buildCmsPlayPath(sourceCode, vodId, episodeIndex),
     [sourceCode, vodId],
@@ -353,7 +337,6 @@ export default function UnifiedPlayer() {
             url,
             art: artInstance,
             adFilteringEnabled,
-            playbackProxyUrl,
             isCurrentPlayer: () => playerRef.current === artInstance,
           })
         },
@@ -520,7 +503,6 @@ export default function UnifiedPlayer() {
     detail,
     episodes,
     navigate,
-    playbackProxyUrl,
     selectedEpisode,
     showPlayerNotice,
     sourceCode,
@@ -661,7 +643,6 @@ export default function UnifiedPlayer() {
                   art={activeArt}
                   visible={controlsVisible}
                   src={detail.episodes[selectedEpisode]}
-                  previewProxyUrl={playbackProxyUrl ?? undefined}
                   coverUrl={detail.videoInfo?.cover}
                   title={title}
                   sourceName={sourceName}

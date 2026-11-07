@@ -2,11 +2,8 @@ import { Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router'
 import { AspectRatio } from '@/shared/components/ui/aspect-ratio'
-import { normalizeProxyPrefix } from '@/shared/config/api.config'
 import { prefetchCmsDetail } from '@/shared/lib/detailCache'
-import { warmPlaybackChain } from '@/shared/lib/playbackWarmup'
 import { parseCmsPlayPath } from '@/shared/lib/routes'
-import { useSettingStore } from '@/shared/store/settingStore'
 import type { SourceColorScheme } from '@/shared/lib/source-colors'
 
 interface MediaPosterCardProps {
@@ -52,13 +49,6 @@ export function MediaPosterCard({
   const posterSrc = !imageFailed && posterUrl ? posterUrl : undefined
   const hoverTimerRef = useRef<number | null>(null)
 
-  /* 代理前缀来自设置(用户可自定义 proxyUrl / 关闭代理),不能写死默认值;
-     normalizeProxyPrefix 对空输入会回退默认前缀,故「关闭」分支必须显式给 null */
-  const { network } = useSettingStore()
-  const playbackProxyUrl = network.isProxyEnabled
-    ? normalizeProxyPrefix(network.proxyUrl)
-    : null
-
   useEffect(() => {
     setImageFailed(false)
   }, [posterUrl])
@@ -73,34 +63,27 @@ export function MediaPosterCard({
 
   /**
    * 播放路径预取:点击立即拉取详情进缓存;hover(200ms 防抖,防轮播扫过触发风暴)
-   * 再追加暖链——进播放页时 detail/master/首段分片全链命中服务端缓存。
+   * 再拉一次(命中则秒回)——进播放页不用等详情接口。
    * 失败静默,绝不干扰导航。
    */
-  const prefetchOnNavigate = (fireWarmup: boolean) => {
+  const prefetchOnNavigate = () => {
     const parsed = parseCmsPlayPath(to)
     if (!parsed) return
-    void prefetchCmsDetail(parsed.sourceCode, parsed.vodId).then(cachedDetail => {
-      // 代理未开启时暖链无意义(详情/播放都不走代理,缓存没人消费),仅预取详情
-      if (!fireWarmup || !cachedDetail || !playbackProxyUrl) return
-      const firstEpisodeUrl = cachedDetail.episodes[0]
-      if (firstEpisodeUrl) {
-        void warmPlaybackChain(firstEpisodeUrl, playbackProxyUrl)
-      }
-    })
+    void prefetchCmsDetail(parsed.sourceCode, parsed.vodId)
   }
 
   const handlePointerEnter = () => {
     if (hoverTimerRef.current !== null) {
       window.clearTimeout(hoverTimerRef.current)
     }
-    hoverTimerRef.current = window.setTimeout(() => prefetchOnNavigate(true), 200)
+    hoverTimerRef.current = window.setTimeout(prefetchOnNavigate, 200)
   }
 
   const handleClick = () => {
     if (hoverTimerRef.current !== null) {
       window.clearTimeout(hoverTimerRef.current)
     }
-    prefetchOnNavigate(false)
+    prefetchOnNavigate()
   }
 
   // 使用自定义配色或默认配色
