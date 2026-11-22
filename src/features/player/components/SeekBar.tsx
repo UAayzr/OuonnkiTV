@@ -25,8 +25,8 @@ interface SeekBarProps {
 const SEEK_DEAD_ZONE_SECONDS = 0.3
 /** seek 已生效判定容差 */
 const SCRUB_SETTLE_TOLERANCE_SECONDS = 0.6
-/** 白点等待 seek 生效的兜底超时 */
-const SCRUB_SETTLE_TIMEOUT_MS = 2000
+/** 白点等待 seek 生效的兜底超时(源站慢时 seek 可持续数秒,期间不能回跳) */
+const SCRUB_SETTLE_TIMEOUT_MS = 10_000
 /** 真帧抓取节流间隔 */
 const PREVIEW_CAPTURE_INTERVAL_MS = 120
 /** 抓帧器空闲销毁延时 */

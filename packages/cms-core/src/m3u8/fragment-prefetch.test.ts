@@ -113,6 +113,30 @@ describe('fragment-prefetch 并发预取', () => {
     expect(getFragmentPrefetchStats().queued).toBe(before.queued)
   })
 
+  it('清空队列会中止在途预取下载,避免旧位置抢占连接', async () => {
+    let requestedUrl = ''
+    let aborted = false
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        requestedUrl = url
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            aborted = true
+            reject(new Error('aborted'))
+          })
+        })
+      }),
+    )
+    configureFragmentPrefetch(transformer)
+    prefetchFragment('https://cdn.example.com/hls/seg-abort.ts')
+    clearFragmentPrefetch()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(requestedUrl).toContain('seg-abort')
+    expect(aborted).toBe(true)
+  })
+
   it('ensurePrefetchWindow 按 currentSn 补齐到目标窗口', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('x')))
     configureFragmentPrefetch(transformer, { windowSize: 6 })

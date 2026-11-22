@@ -107,6 +107,19 @@ describe('usePlayerState', () => {
     expect(result.current.playing).toBe(false)
   })
 
+  it('video:seeking 时立即刷新 currentTime，慢速 seek 等待期间进度条不回跳', () => {
+    const { art, emit } = createFakeArt()
+    const { result } = renderHook(() => usePlayerState(art))
+
+    // seek 发起后 video.currentTime 已指向目标位置，但 seeked/timeupdate 尚未触发
+    Object.defineProperty(art, 'currentTime', { value: 90, configurable: true, writable: true })
+    act(() => {
+      emit('video:seeking')
+    })
+
+    expect(result.current.currentTime).toBe(90)
+  })
+
   it('卸载后移除监听', () => {
     const { art, setPaused, emit } = createFakeArt()
     const { result, unmount } = renderHook(() => usePlayerState(art))

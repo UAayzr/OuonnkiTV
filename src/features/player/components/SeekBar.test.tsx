@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { SeekBar } from './SeekBar'
 
 const mockRect = (width = 100) => {
@@ -104,6 +104,32 @@ describe('SeekBar', () => {
       duration: 120,
     })
     expect(screen.getAllByTestId('seek-buffered')).toHaveLength(2)
+  })
+
+  it('松手后加载完成前，播放头保持目标位置，不回跳到旧进度', () => {
+    vi.useFakeTimers()
+    try {
+      mockRect(200)
+      renderBar({ currentTime: 30, duration: 120 })
+
+      const slider = screen.getByRole('slider', { name: '播放进度' })
+      const thumb = screen.getByTestId('seek-thumb')
+
+      fireEvent.pointerDown(slider, { clientX: 20, pointerId: 1 })
+      fireEvent.pointerMove(slider, { clientX: 100, pointerId: 1 })
+      fireEvent.pointerUp(slider, { clientX: 100, pointerId: 1 })
+
+      // 目标 60/120 = 50%，此时 currentTime 仍是旧的 30（25%）
+      expect(thumb.style.left).toBe('50%')
+
+      // 慢速 seek：超过原来的 2 秒兜底后仍应停在目标位置，而不是回跳到 25%
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
+      expect(thumb.style.left).toBe('50%')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('拖拽目标与当前播放位置几乎重合时不 seek（防误触）', () => {

@@ -125,6 +125,9 @@ export function usePlayerState(art: Artplayer | null): PlayerUiState {
     art.on('ready', apply)
     art.on('restart', apply)
     art.on('video:loadedmetadata', apply)
+    // seeking：seek 发起瞬间 video.currentTime 已指向目标位置,立即刷新,
+    // 否则慢速 CDN 上 seek 等待期间进度条会继续显示旧位置
+    art.on('video:seeking', apply)
     art.on('video:seeked', apply)
     art.on('video:play', apply)
     // playing：缓冲结束后真正开始出画时才派发，起播卡在 currentTime=0 的那段时间靠它兜回来
@@ -152,6 +155,7 @@ export function usePlayerState(art: Artplayer | null): PlayerUiState {
       art.off('ready', apply)
       art.off('restart', apply)
       art.off('video:loadedmetadata', apply)
+      art.off('video:seeking', apply)
       art.off('video:seeked', apply)
       art.off('video:play', apply)
       art.off('video:playing', apply)

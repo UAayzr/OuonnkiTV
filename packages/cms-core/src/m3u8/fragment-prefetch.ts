@@ -5,11 +5,11 @@
  * ≈2Mbps,4x 倍速耗流 ≈2Mbps,下载与消耗贴平,任何抖动都会卡)。同一 CDN 并发
  * 拉片实测总吞吐提升约 3 倍(单连接限速型 CDN)。
  *
- * 机制：播放器侧监听 LEVEL_LOADED / FRAG_LOADING / ratechange,调
- * ensurePrefetchWindow 把「播放头之后的后续分片」按目标窗口并行下载入队;
+ * 机制：播放器侧在分片加载完成(FRAG_LOADED)、倍速切换、seek 后调用
+ * ensurePrefetchWindow,把「该分片之后的后续分片」按目标窗口并行下载入队;
  * 自定义 loader 收到对应分片请求时先从队列取结果直接投喂,命中则不重新下载。
- * 暂停时 hls.js 默认继续拉缓冲(FRAG_LOADING 持续触发),预取也随之持续;
- * 清单刚解析完也会立即预取一个窗口。队列 = 实例级内存缓冲,上限 maxQueueSize 片。
+ * 正在下载/即将请求的分片不预取,避免预取抢带宽拖慢它。
+ * 队列 = 实例级内存缓冲,上限 maxQueueSize 片。
  */
 
 const QUEUE_TIMEOUT_MS = 30_000
@@ -18,6 +18,8 @@ const QUEUE_TIMEOUT_MS = 30_000
 interface QueueEntry {
   promise: Promise<ArrayBuffer> | null
   settled: boolean
+  /** 在途下载的中止器:清空/跳转时立即释放连接,避免旧位置下载抢占新目标带宽 */
+  controller?: AbortController
 }
 
 /** 模块级队列:分片请求 URL → 下载中/已就绪的二进制内容 */
@@ -66,17 +68,25 @@ export function configureFragmentPrefetch(
   if (!transformer) clearFragmentPrefetch()
 }
 
-/** 清空队列(播放器销毁时调用;在途下载不被中断,完成后自然失效) */
+/**
+ * 清空队列(播放器销毁/seek 跳转时调用)。
+ * 队列中尚未被消费的在途下载会被中止:它们已经不会再被使用,继续占着连接只会
+ * 拖慢新位置的目标分片(实测跳转后旧窗口 10+ 个慢下载把新目标堵到 25 秒)。
+ * 已被 loader 取走的分片不在此列,由 loader 自身的生命周期处理。
+ */
 export function clearFragmentPrefetch(): void {
+  for (const entry of queue.values()) {
+    if (!entry.settled) entry.controller?.abort()
+  }
   queue.clear()
 }
 
 /**
- * 补拉窗口:把播放头 currentSn 之后的后续分片逐个入队,直到队列片数达到
+ * 补拉窗口:把 currentSn 之后的后续分片逐个入队,直到队列片数达到
  * targetWindow 或清单里没有更多可预取的片为止。幂等(已入队的片不重复
- * 下载),播放器每次 FRAG_LOADING / LEVEL_LOADED / ratechange 都可安全调用。
+ * 下载),播放器在 FRAG_LOADED / ratechange / seek 后可安全调用。
  * @param fragments 当前档位的完整分片列表(来自 LEVEL_LOADED 的 details.fragments)
- * @param currentSn 播放头所在分片序号;-1 表示清单刚加载、从头补拉
+ * @param currentSn 基准分片序号,只预取它之后的分片(通常传刚加载完成的分片)
  */
 export function ensurePrefetchWindow(
   fragments: { sn: string | number; url?: string }[],
@@ -133,13 +143,18 @@ export function tryTakeFragment(requestUrl: string): Promise<ArrayBuffer> | null
 }
 
 function startDownload(requestUrl: string, entry: QueueEntry): Promise<ArrayBuffer> {
-  const pending = fetch(requestUrl, { signal: AbortSignal.timeout(QUEUE_TIMEOUT_MS) })
+  const controller = new AbortController()
+  entry.controller = controller
+  const timer = setTimeout(() => controller.abort(), QUEUE_TIMEOUT_MS)
+  const pending = fetch(requestUrl, { signal: controller.signal })
     .then(response => {
       if (!response.ok) throw new Error(`prefetch failed: ${response.status}`)
       return response.arrayBuffer()
     })
     .finally(() => {
       entry.settled = true
+      clearTimeout(timer)
+      entry.controller = undefined
     })
   // 下载失败且无人消费时,避免 unhandled rejection;消费方仍能收到同一个错误
   pending.catch(() => {})
