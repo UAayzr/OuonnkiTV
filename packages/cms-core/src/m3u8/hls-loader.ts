@@ -55,7 +55,10 @@ export function createHlsLoaderClass(config: HlsLoaderConfig): any {
 
         // 分片:优先消费预取队列(并发预取的后续分片),命中则跳过网络直接投喂。
         // 下载失败时 reject,这里交由 hls.js 自身的重试机制处理。
-        if (context?.type === 'frag') {
+        // 注意:hls.js 的 FragmentLoaderContext 没有 type 字段(type 只属于清单/档位
+        // context),必须用 context.frag 判定;保留 type 判断以兼容旧版形态。
+        const isFragmentContext = Boolean(context?.frag) || context?.type === 'frag'
+        if (isFragmentContext) {
           const prefetched = tryTakeFragment(context.url)
           if (prefetched) {
             const trequest = performance.now()

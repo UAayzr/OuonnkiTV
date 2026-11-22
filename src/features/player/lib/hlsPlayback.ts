@@ -130,13 +130,18 @@ export function attachHlsPlayback({
          * 暂停时 hls.js 默认继续拉缓冲,FRAG_LOADING 持续触发,预取也随之持续。
          * transformer 与 loader 的 urlTransformer 保持一致(代理模式走 /proxy,
          * 直连模式也无碍,同样并行下载)。
+         *
+         * 预取队列只有自定义 loader 会消费;未注入 loader 时启动预取等于重复下载,
+         * 因此这里与 hlsConfig 的 loader 注入条件保持同一开关。
          */
+        const prefetchEnabled = Boolean(adFilteringEnabled || playbackProxyUrl)
         let fragments: FragmentLike[] = []
         // transformer 与播放器生命周期绑定,构造一次复用,避免反复重建闭包
         const prefetchTransformer = playbackProxyUrl
           ? (url: string) => wrapPlaybackUrl(url, playbackProxyUrl)
           : (url: string) => url
         const applyPrefetchWindow = () => {
+          if (!prefetchEnabled) return
           // 目标窗口随播放速率伸缩,拉满为止(流量不计较,保不卡顿)
           const rate = Math.max(1, video.playbackRate || 1)
           configureFragmentPrefetch(prefetchTransformer, {
@@ -144,19 +149,21 @@ export function attachHlsPlayback({
           })
           ensurePrefetchWindow(fragments, -1)
         }
-        hls.on(HlsClass.Events.LEVEL_LOADED, (_event: unknown, data: { details?: { fragments?: FragmentLike[] } }) => {
-          if (data?.details?.fragments) {
-            fragments = data.details.fragments
-            applyPrefetchWindow()
-          }
-        })
-        hls.on(HlsClass.Events.FRAG_LOADING, (_event: unknown, data: { frag?: { sn: FragmentLike['sn'] } }) => {
-          const currentSn = data?.frag?.sn
-          if (typeof currentSn !== 'number' || fragments.length === 0) return
-          ensurePrefetchWindow(fragments, currentSn)
-        })
-        video.addEventListener('ratechange', applyPrefetchWindow)
-        applyPrefetchWindow()
+        if (prefetchEnabled) {
+          hls.on(HlsClass.Events.LEVEL_LOADED, (_event: unknown, data: { details?: { fragments?: FragmentLike[] } }) => {
+            if (data?.details?.fragments) {
+              fragments = data.details.fragments
+              applyPrefetchWindow()
+            }
+          })
+          hls.on(HlsClass.Events.FRAG_LOADING, (_event: unknown, data: { frag?: { sn: FragmentLike['sn'] } }) => {
+            const currentSn = data?.frag?.sn
+            if (typeof currentSn !== 'number' || fragments.length === 0) return
+            ensurePrefetchWindow(fragments, currentSn)
+          })
+          video.addEventListener('ratechange', applyPrefetchWindow)
+          applyPrefetchWindow()
+        }
 
         art.on('destroy', () => {
           hls.destroy()

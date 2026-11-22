@@ -9,8 +9,9 @@ import {
 } from './fragment-prefetch'
 
 /** 模拟 hls.js 默认加载器基类 */
+const baseLoad = vi.fn()
 class DefaultLoader {
-  load = vi.fn()
+  load = baseLoad
 }
 
 const FakeHls = {
@@ -21,9 +22,12 @@ const FakeHls = {
 const transformer = (url: string) =>
   url.startsWith('/proxy?url=') ? url : `/proxy?url=${encodeURIComponent(url)}`
 
-const makeContext = (type: string, url: string) => ({ type, url })
+/** 真实 hls.js 的分片 context 没有 type 字段;清单/档位 context 才有 type */
+const makeContext = (type: string, url: string) =>
+  type === 'frag' ? { frag: {}, url } : { type, url }
 
 beforeEach(() => {
+  baseLoad.mockClear()
   configureFragmentPrefetch(transformer)
 })
 
@@ -52,7 +56,7 @@ describe('fragment-prefetch 并发预取', () => {
 
     // 命中缓存:onSuccess 投喂数据,原始 load 未被调用
     expect(callbacks.onSuccess).toHaveBeenCalledTimes(1)
-    expect(loader.load).toBeDefined()
+    expect(baseLoad).not.toHaveBeenCalled()
     const data = callbacks.onSuccess.mock.calls[0][0].data
     expect(data).toBeInstanceOf(ArrayBuffer)
     expect(new Uint8Array(data)[0]).toBe(0x47)
@@ -70,6 +74,7 @@ describe('fragment-prefetch 并发预取', () => {
 
     // 默认 loader 的 load 被调用(原样透传)
     expect(callbacks.onSuccess).not.toHaveBeenCalled()
+    expect(baseLoad).toHaveBeenCalledTimes(1)
   })
 
   it('同一 URL 预取幂等:只下载一次', async () => {
@@ -98,8 +103,7 @@ describe('fragment-prefetch 并发预取', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // 预取失败时走 originalLoad(默认 loader 的 load)
-    // 这里 originalLoad 是 vi.fn 的 DefaultLoader.load
-    expect(loader.load).toBeDefined()
+    expect(baseLoad).toHaveBeenCalledTimes(1)
   })
 
   it('未配置 transformer 时预取被跳过', () => {

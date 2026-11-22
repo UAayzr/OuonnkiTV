@@ -20,6 +20,7 @@ vi.mock('hls.js/dist/hls.light.mjs', () => ({
   default: class FakeHls {
     static isSupported = () => true
     static DefaultConfig = { loader: FakeDefaultLoader }
+    static Events = { LEVEL_LOADED: 'LEVEL_LOADED', FRAG_LOADING: 'FRAG_LOADING' }
     loadSource = vi.fn()
     attachMedia = vi.fn()
     destroy = vi.fn()
@@ -79,6 +80,8 @@ describe('attachHlsPlayback', () => {
       'https://vip.dytt-network.com/20261101/41978_249e668a/index.m3u8',
     )
     expect(fakeHlsInstances[0].config.loader).toBeUndefined()
+    // 未注入 loader:分片预取不启动,避免预取队列无人消费造成重复下载
+    expect(fakeHlsInstances[0].on).not.toHaveBeenCalled()
   })
 
   it('adFilteringEnabled=true:注入处理广告的 loader,URL 不重写', async () => {
@@ -86,6 +89,8 @@ describe('attachHlsPlayback', () => {
     await flushAsync()
 
     expect(fakeHlsInstances[0].config.loader).toBeDefined()
+    // 注入了 loader → 分片预取随之启用(LEVEL_LOADED 监听已挂)
+    expect(fakeHlsInstances[0].on).toHaveBeenCalledWith('LEVEL_LOADED', expect.any(Function))
     const loaderInstance = new (fakeHlsInstances[0].config.loader as unknown as new () => { load: (c: unknown, l: unknown, cb: unknown) => void })()
     const context = {
       url: 'https://vip.dytt-network.com/20261101/41978_249e668a/index.m3u8',
@@ -106,7 +111,7 @@ describe('attachHlsPlayback', () => {
     const loaderInstance = new (fakeHlsInstances[0].config.loader as unknown as new () => { load: (c: unknown, l: unknown, cb: unknown) => void })()
     const context = {
       url: 'https://vip.dytt-network.com/20261101/41978_249e668a/3000k/hls/a.ts',
-      type: 'frag',
+      frag: {},
     }
     ;(loaderInstance as { load: (c: unknown, l: unknown, cb: unknown) => void }).load(
       context,
@@ -116,7 +121,7 @@ describe('attachHlsPlayback', () => {
     expect(context.url).toBe(`/proxy?url=${encodeURIComponent('https://vip.dytt-network.com/20261101/41978_249e668a/3000k/hls/a.ts')}`)
 
     // 已含代理前缀的 URL 不重复包裹
-    const proxiedContext = { url: context.url, type: 'frag' }
+    const proxiedContext = { url: context.url, frag: {} }
     ;(loaderInstance as { load: (c: unknown, l: unknown, cb: unknown) => void }).load(
       proxiedContext,
       {},
@@ -131,7 +136,7 @@ describe('attachHlsPlayback', () => {
 
     expect(fakeHlsInstances[0].config.loader).toBeDefined()
     const loaderInstance = new (fakeHlsInstances[0].config.loader as unknown as new () => { load: (c: unknown, l: unknown, cb: unknown) => void })()
-    const context = { url: 'https://cdn.example.com/x.ts', type: 'frag' }
+    const context = { url: 'https://cdn.example.com/x.ts', frag: {} }
     ;(loaderInstance as { load: (c: unknown, l: unknown, cb: unknown) => void }).load(
       context,
       {},
