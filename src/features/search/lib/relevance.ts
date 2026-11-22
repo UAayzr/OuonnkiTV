@@ -9,7 +9,9 @@ import { normalizeLatencyQuery, type SourceLatencyEntry } from './sourceLatency'
  *
  * 打分分层互不重叠（整数区间）：
  *   完全匹配 6000 / 前缀 5000+ / 包含 4000+ / 全词命中 3000+ / 部分命中 2000+
- *   仅辅助字段命中 ≤499 —— 任何标题级命中都严格高于仅辅助字段命中。
+ *   辅助字段仅在标题无命中时计分，且上限 499。
+ * 因此任何标题级命中都严格高于仅辅助字段命中；同一标题层内直接按源耗时决胜，
+ * 不会被演员、简介等字段的完整度差异盖过速度。
  */
 
 /** 分隔符：空白、标点、符号、零宽字符 */
@@ -155,11 +157,12 @@ const scoreAuxiliary = (query: RelevanceQuery, item: NormalizedItem): number => 
   return Math.round(AUX_SCORE_MAX * Math.min(1, weighted))
 }
 
-/** 相关性总分：标题分层分 + 辅助字段加分 */
+/** 相关性总分：标题分层分；标题无命中时才用辅助字段区分 */
 export function scoreRelevance(query: RelevanceQuery, item: VideoItem): number {
   if (!query.compact) return 0
   const normalized = normalizeItem(item)
-  return scoreTitle(query, normalized.title) + scoreAuxiliary(query, normalized)
+  const titleScore = scoreTitle(query, normalized.title)
+  return titleScore > 0 ? titleScore : scoreAuxiliary(query, normalized)
 }
 
 /**

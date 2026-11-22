@@ -93,6 +93,16 @@ describe('scoreRelevance 分层', () => {
     expect(value).toBeLessThanOrEqual(499)
   })
 
+  it('标题精确匹配时辅助字段不再加分，同层内按速度决胜', () => {
+    expect(score('三体', makeItem('a', '1', '三体', {
+      vod_actor: '三体',
+      vod_director: '三体',
+      type_name: '三体',
+      vod_remarks: '三体',
+      vod_content: '三体',
+    }))).toBe(TITLE_SCORE.exact)
+  })
+
   it('标题级命中严格高于辅助字段全部命中', () => {
     const partial = score('三体 动画', makeItem('a', '1', '三体'))
     const auxOnly = score('三体', makeItem('b', '1', '无关标题', {
