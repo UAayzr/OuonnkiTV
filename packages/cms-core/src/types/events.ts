@@ -33,6 +33,11 @@ export interface SearchProgressEvent {
   source: VideoSource
   completed: number
   total: number
+  /**
+   * 该源本次真实搜索请求耗时（毫秒）。
+   * 从限流放行后开始计时，包含请求、重试与解析，不含并发排队。
+   */
+  durationMs?: number
 }
 
 /**
@@ -45,6 +50,8 @@ export interface SearchResultEvent {
   isIncremental: boolean
   /** 分页信息 */
   pagination?: Pagination
+  /** 同 SearchProgressEvent.durationMs：该源本次真实搜索请求耗时（毫秒） */
+  durationMs?: number
 }
 
 /**

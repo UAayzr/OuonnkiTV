@@ -51,6 +51,40 @@ describe('聚合搜索和并发控制', () => {
     expect(result.map(item => item.source_code)).toEqual(['a', 'b'])
     expect(onProgress).toHaveBeenCalledTimes(2)
     expect(onResult).toHaveBeenCalledTimes(2)
+    // 回调携带单源真实耗时
+    expect(onProgress.mock.calls.every(call => typeof call[3] === 'number')).toBe(true)
+    expect(onResult.mock.calls.every(call => typeof call[3] === 'number')).toBe(true)
+  })
+
+  it('单源耗时不含限流排队，失败源只有进度事件', async () => {
+    const onProgress = vi.fn()
+    const onResult = vi.fn()
+    const search = createAggregatedSearch(
+      async (_query, source): Promise<SearchResult> => {
+        if (source.id === 'a') {
+          await new Promise(resolve => setTimeout(resolve, 30))
+          throw new Error('搜索失败')
+        }
+        return {
+          success: true,
+          items: [{ vod_id: '1', vod_name: '影片', source_code: source.id }],
+        }
+      },
+      { concurrencyLimit: 1, onProgress, onResult },
+    )
+
+    await search('关键词', sources, 1)
+
+    const progressA = onProgress.mock.calls.find(call => call[2].id === 'a')
+    const progressB = onProgress.mock.calls.find(call => call[2].id === 'b')
+    expect(progressA?.[3]).toBeGreaterThanOrEqual(20)
+    // b 排在 a 之后：排队时间不计入 b 的耗时
+    expect(progressB?.[3]).toBeTypeOf('number')
+    expect(progressB?.[3]).toBeLessThan(20)
+
+    // 失败源不产生结果事件
+    expect(onResult).toHaveBeenCalledTimes(1)
+    expect(onResult.mock.calls[0][1].id).toBe('b')
   })
 
   it('收到取消信号后立即结束', async () => {
@@ -85,8 +119,14 @@ describe('CMS 客户端事件', () => {
     const eventTypes: string[] = []
 
     client.on('search:start', event => eventTypes.push(event.type))
-    client.on('search:result', event => eventTypes.push(event.type))
-    client.on('search:progress', event => eventTypes.push(event.type))
+    client.on('search:result', event => {
+      eventTypes.push(event.type)
+      expect(event.durationMs).toBeTypeOf('number')
+    })
+    client.on('search:progress', event => {
+      eventTypes.push(event.type)
+      expect(event.durationMs).toBeTypeOf('number')
+    })
     client.on('search:complete', event => eventTypes.push(event.type))
 
     await client.aggregatedSearch('影片', [sources[0]], 1)

@@ -8,7 +8,8 @@ import {
   getSourcesToFetch,
   type SourcePaginationInfo,
 } from './directSearch.utils'
-import { sortResultsBySourceSpeed, useSourceSpeedStore } from '../lib/sourceSpeed'
+import { useSourceLatencyStore } from '../lib/sourceLatency'
+import { sortResultsByRelevance } from '../lib/relevance'
 
 export function useDirectSearch() {
   const [directResults, setDirectResults] = useState<VideoItem[]>([])
@@ -39,20 +40,9 @@ export function useDirectSearch() {
   const { videoAPIs } = useApiStore()
   const cmsClient = useCmsClient()
 
-  // 速度表：zustand 单轨订阅，测速条目增量 merge 时自动触发重渲染
-  const sourceSpeeds = useSourceSpeedStore(state => state.entries)
-
   const selectedAPIs = useMemo(() => {
     return videoAPIs.filter(api => api.isEnabled)
   }, [videoAPIs])
-
-  // 速度条目更新 → 对当前结果按新速度重排（幂等：结果为空/未测时跳过）
-  useEffect(() => {
-    if (sourceSpeeds.size === 0 || directResults.length === 0) return
-    setDirectResults(prev =>
-      prev.length > 0 ? sortResultsBySourceSpeed(prev, sourceSpeeds) : prev,
-    )
-  }, [sourceSpeeds, directResults.length])
 
   const fetchDirectSearch = useCallback(async (keyword: string, page: number = 1) => {
     if (!keyword || selectedAPIs.length === 0) return
@@ -87,9 +77,6 @@ export function useDirectSearch() {
     // 保存当前页需要请求的源列表
     sourcesToFetchRef.current = sourcesToFetch
 
-    // 后台测速（不 await，不拖慢搜索）：store 每测完一个源增量发布，
-    // 本 hook 的 useEffect 重排 + 组件速度标签由订阅即时响应
-    useSourceSpeedStore.getState().ensure(sourcesToFetch)
     // 本页进度分母：全缓存命中时按全部源计
     totalForPageRef.current =
       sourcesToFetch.length > 0 ? sourcesToFetch.length : selectedAPIs.length
@@ -165,11 +152,16 @@ export function useDirectSearch() {
         }
       }
 
+      // 真实搜索耗时入表：只在成功返回结果的源上记录，失败源不参与速度排序
+      if (event.source?.id && typeof event.durationMs === 'number' && event.durationMs >= 0) {
+        useSourceLatencyStore.getState().record(event.source, event.durationMs, keyword)
+      }
+      // 在 updater 外取快照，保持 updater 纯函数
+      const latencies = useSourceLatencyStore.getState().entries
+
       setDirectResults(prev => {
         const merged = appendUniqueVideoItems(prev, event.items, seenResultKeysRef.current)
-        // 速度表已就绪（暖缓存/前序测速）→ 每事件重排（幂等）；冷启动只追加，由速度订阅重排
-        const entries = useSourceSpeedStore.getState().entries
-        return entries.size > 0 ? sortResultsBySourceSpeed(merged, entries) : merged
+        return sortResultsByRelevance(merged, keyword, latencies)
       })
 
       // 记录成功返回结果的源（有结果的源才算成功）

@@ -10,11 +10,13 @@ import { getSourceColorScheme } from '@/shared/lib/source-colors'
 import { SourceStatusBadge } from './SourceStatusBadge'
 import { buildCmsPlayPath } from '@/shared/lib/routes'
 import { useFlipLayout } from '@/shared/hooks/useFlipLayout'
-import { formatSpeed, useSourceSpeedStore } from '../lib/sourceSpeed'
+import { formatLatency, normalizeLatencyQuery, useSourceLatencyStore } from '../lib/sourceLatency'
 
 interface SearchResultsGridProps {
   /** 直连搜索结果 */
   directResults?: VideoItem[]
+  /** 当前搜索词（用于匹配对应关键词的耗时样本） */
+  query: string
   /** 是否加载中 */
   loading: boolean
   /** 直连搜索进度（已完成的源数量/总源数量） */
@@ -83,6 +85,7 @@ function EmptyState() {
  */
 export function SearchResultsGrid({
   directResults = [],
+  query,
   loading,
   searchProgress,
   successfulSources,
@@ -102,8 +105,9 @@ export function SearchResultsGrid({
     overscanRows: VIRTUAL_OVERSCAN_ROWS,
   })
 
-  // 各源测速结果：store 订阅，测速条目增量到达时自动更新标签
-  const sourceSpeeds = useSourceSpeedStore(state => state.entries)
+  // 各源真实搜索耗时：store 订阅，耗时到达时自动更新标签
+  const sourceLatencies = useSourceLatencyStore(state => state.entries)
+  const normalizedQuery = normalizeLatencyQuery(query)
 
   // 重排 FLIP v2：零测量（位置由序位 + 布局推算）+ 弹性补位
   const gridRef = useRef<HTMLDivElement | null>(null)
@@ -183,11 +187,11 @@ export function SearchResultsGrid({
 
                 // 根据源代码生成配色方案
                 const colorScheme = getSourceColorScheme(item.source_code)
-                // 来源站速度（右上角角标下方的小标签）
-                const speedEntry = sourceSpeeds.get(item.source_code)
-                const speedLabel =
-                  speedEntry?.ok && speedEntry.throughputMBps !== null
-                    ? formatSpeed(speedEntry.throughputMBps)
+                // 来源站真实搜索耗时（右上角角标下方的小标签）
+                const latencyEntry = sourceLatencies.get(item.source_code)
+                const latencyLabel =
+                  latencyEntry && latencyEntry.query === normalizedQuery
+                    ? formatLatency(latencyEntry.smoothedMs)
                     : undefined
 
                 // 稳定 key：渲染集合内 (source_code, vod_id) 唯一
@@ -202,7 +206,7 @@ export function SearchResultsGrid({
                       year={item.vod_year}
                       topRightLabel={item.source_name}
                       topRightLabelColorScheme={colorScheme}
-                      topRightSecondaryLabel={speedLabel}
+                      topRightSecondaryLabel={latencyLabel}
                       rating={
                         item.vod_douban_score !== undefined
                           ? typeof item.vod_douban_score === 'number'

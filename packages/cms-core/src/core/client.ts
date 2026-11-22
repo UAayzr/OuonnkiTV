@@ -109,21 +109,23 @@ export function createCmsClient(config?: CmsClientConfig): CmsClient {
   // 创建聚合搜索
   const aggregatedSearchFn = createAggregatedSearch(searchWithEvents, {
     concurrencyLimit,
-    onProgress: (completed, total, source) => {
+    onProgress: (completed, total, source, durationMs) => {
       emitter.emit({
         type: 'search:progress',
         source,
         completed,
         total,
+        durationMs,
       })
     },
-    onResult: (items, source, pagination) => {
+    onResult: (items, source, pagination, durationMs) => {
       emitter.emit({
         type: 'search:result',
         source,
         items,
         isIncremental: true,
         pagination,
+        durationMs,
       })
     },
   })

@@ -7,10 +7,20 @@ import { createConcurrencyLimiter } from './concurrency'
 export interface AggregatorOptions {
   /** 并发限制数 */
   concurrencyLimit: number
-  /** 进度回调 */
-  onProgress?: (completed: number, total: number, source: VideoSource) => void
-  /** 结果回调（增量） */
-  onResult?: (items: VideoItem[], source: VideoSource, pagination?: Pagination) => void
+  /** 进度回调；durationMs 为该源本次真实请求耗时（不含限流排队） */
+  onProgress?: (
+    completed: number,
+    total: number,
+    source: VideoSource,
+    durationMs?: number,
+  ) => void
+  /** 结果回调（增量）；durationMs 同 onProgress */
+  onResult?: (
+    items: VideoItem[],
+    source: VideoSource,
+    pagination?: Pagination,
+    durationMs?: number,
+  ) => void
 }
 
 /**
@@ -63,21 +73,26 @@ export function createAggregatedSearch(
       limiter(async () => {
         if (aborted) return [] as VideoItem[]
 
+        // 计时放在限流放行之后：排队时长由并发数与源顺序决定，不是源本身的属性；
+        // 请求、重试与解析都计入，反映用户真实等待该源的时长
+        const startedAt = Date.now()
         let result: SearchResult
         try {
           result = await searchFn(query, source, page)
         } catch (error) {
+          const durationMs = Date.now() - startedAt
           if (aborted) return [] as VideoItem[]
           console.warn(`${source.name} 源搜索失败:`, error)
           completedCount++
-          onProgress?.(completedCount, sources.length, source)
+          onProgress?.(completedCount, sources.length, source, durationMs)
           return [] as VideoItem[]
         }
 
+        const durationMs = Date.now() - startedAt
         if (aborted) return [] as VideoItem[]
 
         completedCount++
-        onProgress?.(completedCount, sources.length, source)
+        onProgress?.(completedCount, sources.length, source, durationMs)
 
         if (!result.success) {
           return [] as VideoItem[]
@@ -96,7 +111,7 @@ export function createAggregatedSearch(
         if (aborted) return [] as VideoItem[]
 
         // 即使结果为空，也要记录分页信息（用于判断是否还有更多页）
-        onResult?.(newUnique, source, result.pagination)
+        onResult?.(newUnique, source, result.pagination, durationMs)
 
         if (newUnique.length === 0) return [] as VideoItem[]
 

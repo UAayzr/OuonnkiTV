@@ -61,6 +61,7 @@ export function SearchDirectSection({ query }: SearchDirectSectionProps) {
       <section>
         <SearchResultsGrid
           directResults={directResults}
+          query={query}
           loading={directLoading}
           searchProgress={searchProgress}
           successfulSources={successfulSourcesInCurrentPage}
