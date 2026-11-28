@@ -3,6 +3,7 @@ import { createHlsLoaderClass } from './hls-loader'
 import {
   clearFragmentPrefetch,
   configureFragmentPrefetch,
+  getFragmentPrefetchStats,
   prefetchFragment,
 } from './fragment-prefetch'
 
@@ -10,6 +11,19 @@ import {
 const baseLoad = vi.fn()
 class DefaultLoader {
   load = baseLoad
+  stats = {
+    aborted: false,
+    loaded: 0,
+    retry: 0,
+    total: 0,
+    chunkCount: 0,
+    bwEstimate: 0,
+    loading: { start: 0, first: 0, end: 0 },
+    parsing: { start: 0, end: 0 },
+    buffering: { start: 0, first: 0, end: 0 },
+  }
+  abort = vi.fn()
+  destroy = vi.fn()
 }
 
 const FakeHls = {
@@ -129,8 +143,149 @@ describe('createHlsLoaderClass', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(callbacks.onSuccess).toHaveBeenCalledTimes(1)
-    expect(callbacks.onSuccess.mock.calls[0][0].data).toBeInstanceOf(ArrayBuffer)
+    const response = callbacks.onSuccess.mock.calls[0][0]
+    expect(response.data).toBeInstanceOf(ArrayBuffer)
     // 已由队列投喂,默认加载路径不应再发请求
     expect(baseLoad).not.toHaveBeenCalled()
+
+    // 必须给 hls.js 的 ABR 提供真实统计（frag.stats === loader.stats）
+    const stats = callbacks.onSuccess.mock.calls[0][1]
+    expect(stats.aborted).toBe(false)
+    expect(stats.loaded).toBe(2)
+    expect(stats.total).toBe(2)
+    expect(stats.loading.start).toBeGreaterThan(0)
+    expect(stats.loading.first).toBeGreaterThanOrEqual(stats.loading.start)
+    expect(stats.loading.end).toBeGreaterThanOrEqual(stats.loading.first)
+  })
+
+  it('预取命中后 abort 取消下载并回调 onAbort,不再回调 onSuccess', async () => {
+    let aborted = false
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              aborted = true
+              reject(new Error('aborted'))
+            })
+          }),
+      ),
+    )
+    configureFragmentPrefetch(url => url)
+    const url = 'https://cdn.example.com/abort.ts'
+    prefetchFragment(url)
+
+    const { instance } = createLoader({ m3u8Processor: null })
+    const callbacks = { onSuccess: vi.fn(), onAbort: vi.fn() }
+    instance.load(
+      fragContext(url),
+      { loadPolicy: { maxTimeToFirstByteMs: 10_000, maxLoadTimeMs: 120_000 } },
+      callbacks,
+    )
+
+    instance.abort()
+    expect(callbacks.onAbort).toHaveBeenCalledTimes(1)
+    expect(aborted).toBe(true)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(callbacks.onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('预取首字节超时触发 onTimeout,不 fallback', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+          }),
+      ),
+    )
+    configureFragmentPrefetch(url => url)
+    const url = 'https://cdn.example.com/timeout.ts'
+    prefetchFragment(url)
+
+    const { instance } = createLoader({ m3u8Processor: null })
+    const callbacks = { onSuccess: vi.fn(), onTimeout: vi.fn(), onAbort: vi.fn() }
+    instance.load(
+      fragContext(url),
+      { loadPolicy: { maxTimeToFirstByteMs: 5, maxLoadTimeMs: 50 } },
+      callbacks,
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 25))
+    expect(callbacks.onTimeout).toHaveBeenCalledTimes(1)
+    expect(callbacks.onSuccess).not.toHaveBeenCalled()
+    expect(baseLoad).not.toHaveBeenCalled()
+  })
+
+  it('预取失败 fallback 前复位统计,不触发 Loader can only be used once', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 403 })))
+    configureFragmentPrefetch(url => url)
+    const url = 'https://cdn.example.com/fallback.ts'
+    prefetchFragment(url)
+
+    baseLoad.mockImplementationOnce(function (this: { stats: { loading: { start: number } } }) {
+      if (this.stats.loading.start) throw new Error('Loader can only be used once.')
+    })
+    const { instance } = createLoader({ m3u8Processor: null })
+    const callbacks = { onSuccess: vi.fn(), onError: vi.fn() }
+    instance.load(fragContext(url), {}, callbacks)
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(baseLoad).toHaveBeenCalledTimes(1)
+    baseLoad.mockReset()
+  })
+
+  it('未命中预取的分片加载期间占用前台预算,完成后释放', () => {
+    const { instance } = createLoader({ m3u8Processor: null })
+    const callbacks = { onSuccess: vi.fn() }
+    instance.load(fragContext('https://cdn.example.com/plain.ts'), {}, callbacks)
+
+    expect(getFragmentPrefetchStats().foreground).toBe(1)
+    const wrapped = (baseLoad.mock.calls[0] as unknown[])[2] as {
+      onSuccess: (...args: unknown[]) => void
+    }
+    wrapped.onSuccess({}, {}, {}, null)
+    expect(getFragmentPrefetchStats().foreground).toBe(0)
+    expect(callbacks.onSuccess).toHaveBeenCalledTimes(1)
+  })
+
+  it('非预取分片 abort 后也释放前台预算', () => {
+    const { instance } = createLoader({ m3u8Processor: null })
+    instance.load(fragContext('https://cdn.example.com/plain-abort.ts'), {}, { onSuccess: vi.fn() })
+
+    expect(getFragmentPrefetchStats().foreground).toBe(1)
+    instance.abort()
+    expect(getFragmentPrefetchStats().foreground).toBe(0)
+  })
+
+  it('destroy 中止预取且不回调', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+          }),
+      ),
+    )
+    configureFragmentPrefetch(url => url)
+    const url = 'https://cdn.example.com/destroy.ts'
+    prefetchFragment(url)
+
+    const { instance } = createLoader({ m3u8Processor: null })
+    const callbacks = { onSuccess: vi.fn(), onAbort: vi.fn() }
+    instance.load(
+      fragContext(url),
+      { loadPolicy: { maxTimeToFirstByteMs: 10_000, maxLoadTimeMs: 120_000 } },
+      callbacks,
+    )
+
+    instance.destroy()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(callbacks.onSuccess).not.toHaveBeenCalled()
+    expect(callbacks.onAbort).not.toHaveBeenCalled()
   })
 })

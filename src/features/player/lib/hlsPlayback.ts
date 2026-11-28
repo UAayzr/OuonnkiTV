@@ -20,9 +20,12 @@ type HlsConstructor = typeof import('hls.js')['default']
 type FragmentLike = {
   sn: string | number
   url?: string
-  /** 分片在时间轴上的起点(秒),用于把 seek 位置映射到分片 */
+  /** 分片在时间轴上的起点(秒)与时长,用于识别 seek 前旧位置迟到的事件 */
   start?: number
   duration?: number
+  /** 分片所属档位与类型(仅 main 分片参与预取) */
+  level?: number
+  type?: string
 }
 
 const m3u8Processor = createM3u8Processor({ filterAds: true })
@@ -144,24 +147,15 @@ export function attachHlsPlayback({
         let lastLoadedSn: number | null = null
         /** 当前档位索引,用于识别 ABR 切档并作废旧档位的预取 */
         let lastLevelIndex: number | null = null
-        /** 上次 seek 命中的分片序号(hls.js 会对同一个 seek 做多次播放头微调) */
-        let lastSeekTargetSn: number | null = null
+        /** seek 后等待首个目标分片;用于忽略旧位置迟到的加载完成事件 */
+        let pendingSeekTime: number | null = null
+        /** seek 后保持 12 片窗口,直到首个目标分片加载完成 */
+        let seekBoost = false
 
         const prefetchWindowSize = (minWindow: number) => {
           const rate = Math.max(1, video.playbackRate || 1)
           const sizeByRate = Math.round(6 * rate)
           return Math.min(32, Math.max(minWindow, sizeByRate))
-        }
-
-        /** 找到包含指定时间的分片序号(清单按 start 升序;找不到返回 null) */
-        const findSnByTime = (time: number): number | null => {
-          let sn: number | null = null
-          for (const fragment of fragments) {
-            if (typeof fragment.start !== 'number' || typeof fragment.sn !== 'number') continue
-            if (fragment.start <= time + 0.05) sn = fragment.sn
-            else break
-          }
-          return sn
         }
 
         // transformer 与播放器生命周期绑定,构造一次复用,避免反复重建闭包
@@ -172,7 +166,7 @@ export function attachHlsPlayback({
         const applyPrefetchWindow = () => {
           if (!prefetchEnabled) return
           configureFragmentPrefetch(prefetchTransformer, {
-            windowSize: prefetchWindowSize(6),
+            windowSize: prefetchWindowSize(seekBoost ? 12 : 6),
           })
           // 只有已有「最近加载完成的分片」时才补拉其后的窗口。
           // 当前/即将请求的分片交给 hls.js 单独下载(有进度与超时控制),避免预取
@@ -184,27 +178,17 @@ export function attachHlsPlayback({
         }
 
         /**
-         * seek 后重置预取窗口:旧位置的分片不会再被消费,必须丢弃,
-         * 否则队列被占满、新位置的预取彻底停摆(实测跳转后只剩串行 XHR)。
-         * 只清空、不预取目标分片本身——目标交由 hls.js 正常下载(有进度与超时控制),
-         * 随后 FRAG_LOADED 会立即把目标之后的一屏窗口并发拉起。
+         * seek 后重置预取窗口:旧位置的分片不会再被消费,必须丢弃。
+         * 这里不做任何去重: hls.js 对齐播放头时会连续触发 seeking,
+         * 重复清空空队列的代价接近 0;而漏清一次就会让旧窗口与新目标抢带宽
+         * (实测慢网下目标分片被拖到 35 秒以上)。
          */
         const handleSeeking = () => {
-          if (!prefetchEnabled || fragments.length === 0) return
-          const targetSn = findSnByTime(video.currentTime)
-          if (targetSn === null) return
-          // hls.js 会微调播放头对齐分片边界,可能连续触发 seeking;
-          // 同分片或相邻分片的微调不重复清空,避免刚拉起的窗口被反复中断。
-          if (
-            lastSeekTargetSn !== null &&
-            Math.abs(targetSn - lastSeekTargetSn) <= 1
-          ) {
-            return
-          }
-          lastSeekTargetSn = targetSn
-
+          if (!prefetchEnabled) return
           clearFragmentPrefetch()
           lastLoadedSn = null
+          pendingSeekTime = video.currentTime
+          seekBoost = true
           configureFragmentPrefetch(prefetchTransformer, {
             // 跳转后最需要并发补货:至少保证一屏窗口,倍速下按 6×rate 扩大
             windowSize: prefetchWindowSize(12),
@@ -228,20 +212,50 @@ export function attachHlsPlayback({
                 clearFragmentPrefetch()
                 lastLoadedSn = null
                 // 新档位分片编号可能重新定义,旧的 seek 基准不再可信
-                lastSeekTargetSn = null
+                pendingSeekTime = null
+                seekBoost = false
               }
               lastLevelIndex = levelIndex
 
               applyPrefetchWindow()
             },
           )
-          hls.on(HlsClass.Events.FRAG_LOADED, (_event: unknown, data: { frag?: { sn: FragmentLike['sn'] } }) => {
-            const currentSn = data?.frag?.sn
-            if (typeof currentSn !== 'number' || fragments.length === 0) return
-            // 分片已下载完成后再补拉其后的窗口:不和正在下载的分片抢连接/带宽
-            lastLoadedSn = currentSn
-            ensurePrefetchWindow(fragments, currentSn)
-          })
+          hls.on(
+            HlsClass.Events.FRAG_LOADED,
+            (_event: unknown, data: { frag?: FragmentLike }) => {
+              const frag = data?.frag
+              if (!frag) return
+              const currentSn = frag.sn
+              if (typeof currentSn !== 'number' || fragments.length === 0) return
+
+              // 只接受当前主档位：ABR 切档后旧档位迟到的加载完成不能拉起预取
+              if (
+                typeof frag.level === 'number' &&
+                lastLevelIndex !== null &&
+                frag.level !== lastLevelIndex
+              ) {
+                return
+              }
+              if (typeof frag.type === 'string' && frag.type !== 'main') return
+
+              // 忽略 seek 前旧位置迟到的分片：它属于已经作废的窗口
+              if (pendingSeekTime !== null) {
+                if (
+                  typeof frag.start === 'number' &&
+                  typeof frag.duration === 'number' &&
+                  frag.start + frag.duration < pendingSeekTime - 0.5
+                ) {
+                  return
+                }
+                pendingSeekTime = null
+              }
+
+              // 分片已下载完成后再补拉其后的窗口:不和正在下载的分片抢连接/带宽
+              lastLoadedSn = currentSn
+              applyPrefetchWindow()
+              seekBoost = false
+            },
+          )
           video.addEventListener('ratechange', applyPrefetchWindow)
           video.addEventListener('seeking', handleSeeking)
           applyPrefetchWindow()

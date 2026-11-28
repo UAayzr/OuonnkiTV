@@ -6,6 +6,8 @@ import {
   ensurePrefetchWindow,
   prefetchFragment,
   getFragmentPrefetchStats,
+  noteForegroundLoadStart,
+  tryTakeFragment,
 } from './fragment-prefetch'
 
 /** 模拟 hls.js 默认加载器基类 */
@@ -28,7 +30,7 @@ const makeContext = (type: string, url: string) =>
 
 beforeEach(() => {
   baseLoad.mockClear()
-  configureFragmentPrefetch(transformer)
+  configureFragmentPrefetch(transformer, { maxInflight: 2, maxQueueSize: 32 })
 })
 
 afterEach(() => {
@@ -213,5 +215,168 @@ describe('fragment-prefetch 并发预取', () => {
     ensurePrefetchWindow(fragments, 0)
     expect(getFragmentPrefetchStats().queued).toBeGreaterThan(firstCount)
     expect(getFragmentPrefetchStats().targetWindow).toBe(24)
+  })
+
+  it('maxInflight 限制同时下载的预取分片数', async () => {
+    const resolvers: (() => void)[] = []
+    const fetchMock = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+          resolvers.push(() => resolve(new Response('x', { status: 200 })))
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    configureFragmentPrefetch(transformer, { windowSize: 6, maxInflight: 2 })
+    const fragments = Array.from({ length: 10 }, (_, i) => ({
+      sn: i,
+      url: `https://cdn.example.com/hls/limit${i}.ts`,
+    }))
+
+    ensurePrefetchWindow(fragments, 0)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(getFragmentPrefetchStats()).toMatchObject({ queued: 6, inflight: 2, waiting: 4 })
+
+    resolvers.shift()?.()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('前台加载期间降低预取预算,release 后恢复', () => {
+    const fetchMock = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    configureFragmentPrefetch(transformer, { windowSize: 6, maxInflight: 2 })
+    const fragments = Array.from({ length: 10 }, (_, i) => ({
+      sn: i,
+      url: `https://cdn.example.com/hls/fg${i}.ts`,
+    }))
+
+    const release = noteForegroundLoadStart()
+    ensurePrefetchWindow(fragments, 0)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(getFragmentPrefetchStats().foreground).toBe(1)
+
+    release()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(getFragmentPrefetchStats().foreground).toBe(0)
+  })
+
+  it('前台请求到达时中止最老的预取,把连接让给当前分片', async () => {
+    const abortedUrls: string[] = []
+    const fetchMock = vi.fn(
+      (url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            abortedUrls.push(url)
+            reject(new Error('aborted'))
+          })
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    configureFragmentPrefetch(transformer, { windowSize: 6, maxInflight: 2 })
+    const fragments = Array.from({ length: 10 }, (_, i) => ({
+      sn: i,
+      url: `https://cdn.example.com/hls/trim${i}.ts`,
+    }))
+
+    ensurePrefetchWindow(fragments, 0)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(getFragmentPrefetchStats().inflight).toBe(2)
+
+    const release = noteForegroundLoadStart()
+    expect(abortedUrls).toHaveLength(1)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(getFragmentPrefetchStats().inflight).toBe(1)
+
+    release()
+  })
+
+  it('hls.js 消费排队中的条目时立即启动,不受预算限制', () => {
+    const fetchMock = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    configureFragmentPrefetch(transformer, { windowSize: 4, maxInflight: 1 })
+    const fragments = Array.from({ length: 10 }, (_, i) => ({
+      sn: i,
+      url: `https://cdn.example.com/hls/take${i}.ts`,
+    }))
+
+    ensurePrefetchWindow(fragments, 0)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    const handle = tryTakeFragment(transformer(fragments[3].url))
+    expect(handle).not.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('clear 重置预算,旧 release 不影响新一代计数', () => {
+    const oldRelease = noteForegroundLoadStart()
+    clearFragmentPrefetch()
+    const release = noteForegroundLoadStart()
+    release()
+    oldRelease()
+    expect(getFragmentPrefetchStats().foreground).toBe(0)
+  })
+
+  it('clear 会中止已被 loader 取走的下载', async () => {
+    let aborted = false
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              aborted = true
+              reject(new Error('aborted'))
+            })
+          }),
+      ),
+    )
+    configureFragmentPrefetch(transformer, { maxInflight: 1 })
+    const rawUrl = 'https://cdn.example.com/hls/taken.ts'
+    prefetchFragment(rawUrl)
+    const handle = tryTakeFragment(transformer(rawUrl))
+    expect(handle).not.toBeNull()
+
+    clearFragmentPrefetch()
+    await expect(handle!.promise).rejects.toThrow()
+    expect(aborted).toBe(true)
+    expect(getFragmentPrefetchStats().inflight).toBe(0)
+  })
+
+  it('预取超过队列超时后标记 timedOut', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          (_url: string, init?: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+              init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+            }),
+        ),
+      )
+      configureFragmentPrefetch(transformer, { maxInflight: 1 })
+      const rawUrl = 'https://cdn.example.com/hls/slow.ts'
+      prefetchFragment(rawUrl)
+      const handle = tryTakeFragment(transformer(rawUrl))
+      expect(handle).not.toBeNull()
+
+      vi.advanceTimersByTime(30_000)
+      await expect(handle!.promise).rejects.toThrow()
+      expect(handle!.timedOut).toBe(true)
+      expect(handle!.cancelled).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

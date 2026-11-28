@@ -252,16 +252,118 @@ describe('attachHlsPlayback', () => {
 
     // 目标分片加载完成后,立即并发预取其后的 seek 窗口
     getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 200 } })
+    await flushAsync()
     const urls = fetchMock.mock.calls.map(call => call[0] as string)
     expect(urls[0]).toBe('https://cdn.example.com/f201.ts')
     expect(urls.length).toBe(12)
     expect(getFragmentPrefetchStats().queued).toBe(12)
 
-    // hls.js 对齐播放头时的相邻分片微调,不重复清空刚拉起的窗口
+    // 相邻分片的 seek 同样清空旧窗口:漏清一次就会让旧窗口与新目标抢带宽
     fetchMock.mockClear()
     video.currentTime = 804 // 第 201 片,与上次 seek 仅相邻
     getVideoHandler(video, 'seeking')()
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(getFragmentPrefetchStats().queued).toBe(0)
+
+    // 目标分片加载完成后重新拉起窗口
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 201, start: 804, duration: 4, level: 0 } })
+    await flushAsync()
+    expect(fetchMock.mock.calls.map(call => call[0])[0]).toBe('https://cdn.example.com/f202.ts')
     expect(getFragmentPrefetchStats().queued).toBe(12)
+  })
+
+  it('seek 后忽略旧位置迟到的 FRAG_LOADED', async () => {
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(
+      async () => new Response(new Uint8Array([0x47]), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const video = createVideo()
+
+    await attachHlsPlayback({ ...defaultArgs(), video, adFilteringEnabled: true })
+    await flushAsync()
+    getHlsHandler('LEVEL_LOADED')({}, { level: 0, details: { fragments: makeFragments(1000) } })
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 0, start: 0, duration: 4, level: 0 } })
+    await flushAsync()
+
+    video.currentTime = 800
+    getVideoHandler(video, 'seeking')()
+    fetchMock.mockClear()
+
+    // 旧位置（0-4s）的加载完成事件迟到：属于已作废的窗口，不能拉起预取
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 5, start: 20, duration: 4, level: 0 } })
+    await flushAsync()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(getFragmentPrefetchStats().queued).toBe(0)
+
+    // 目标分片（800s）到达后才恢复预取
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 200, start: 800, duration: 4, level: 0 } })
+    await flushAsync()
+    expect(fetchMock.mock.calls.map(call => call[0])[0]).toBe('https://cdn.example.com/f201.ts')
+    expect(getFragmentPrefetchStats().queued).toBe(12)
+  })
+
+  it('seek 后 LEVEL_LOADED 不把预取窗口降回 6', async () => {
+    const fetchMock = vi.fn(async () => new Response(new Uint8Array([0x47]), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const video = createVideo()
+
+    await attachHlsPlayback({ ...defaultArgs(), video, adFilteringEnabled: true })
+    await flushAsync()
+    getHlsHandler('LEVEL_LOADED')({}, { level: 0, details: { fragments: makeFragments(1000) } })
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 0, start: 0, duration: 4, level: 0 } })
+    await flushAsync()
+
+    video.currentTime = 800
+    getVideoHandler(video, 'seeking')()
+    // seek 后 hls.js 若重新下发档位，窗口仍必须保持 seek 窗口 12
+    getHlsHandler('LEVEL_LOADED')({}, { level: 0, details: { fragments: makeFragments(1000) } })
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 200, start: 800, duration: 4, level: 0 } })
+    await flushAsync()
+
+    expect(getFragmentPrefetchStats().queued).toBe(12)
+  })
+
+  it('ABR 切档后忽略旧档位迟到的 FRAG_LOADED', async () => {
+    const fetchMock = vi.fn(async () => new Response(new Uint8Array([0x47]), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const video = createVideo()
+
+    await attachHlsPlayback({ ...defaultArgs(), video, adFilteringEnabled: true })
+    await flushAsync()
+    getHlsHandler('LEVEL_LOADED')({}, { level: 0, details: { fragments: makeFragments(1000) } })
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 0, start: 0, duration: 4, level: 0 } })
+    getHlsHandler('LEVEL_LOADED')({}, { level: 1, details: { fragments: makeFragments(1000) } })
+    fetchMock.mockClear()
+
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 5, start: 20, duration: 4, level: 0 } })
+    await flushAsync()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 5, start: 20, duration: 4, level: 1 } })
+    await flushAsync()
+    expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it('4x 倍速下窗口加深到 24,但并发仍受预算限制', async () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+    const video = createVideo()
+
+    await attachHlsPlayback({ ...defaultArgs(), video, adFilteringEnabled: true })
+    await flushAsync()
+    getHlsHandler('LEVEL_LOADED')({}, { level: 0, details: { fragments: makeFragments(1000) } })
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 0, start: 0, duration: 4, level: 0 } })
+    await flushAsync()
+
+    video.playbackRate = 4
+    getVideoHandler(video, 'ratechange')()
+    getHlsHandler('FRAG_LOADED')({}, { frag: { sn: 1, start: 4, duration: 4, level: 0 } })
+    await flushAsync()
+
+    const stats = getFragmentPrefetchStats()
+    expect(stats.targetWindow).toBe(24)
+    expect(stats.queued).toBe(24)
+    expect(stats.inflight).toBeLessThanOrEqual(2)
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(2)
   })
 })
