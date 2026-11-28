@@ -351,12 +351,24 @@ export function PlayerControls({
   const state = usePlayerState(art)
   const settingsPanelRef = useRef<HTMLDivElement>(null)
 
-  // 迷你/画中画模式下不应残留打开的面板
+  const isMobile = isTouchDevice()
+  const isFullscreen = state.fullscreen || state.fullscreenWeb
+  /*
+   * 手机/平板未全屏时是小窗：播放器只有 aspect-video 的高度，而设置面板约 220px 高，
+   * 由底部工具栏向上展开会被容器裁掉上半截。小窗因此不提供设置入口，进全屏后再开放。
+   *
+   * 判定用「主指针是粗指针」而不是 isTouchDevice：触屏笔记本接鼠标后
+   * (pointer: coarse) 不成立，但 maxTouchPoints 仍为正，用后者会把桌面端的设置面板也藏掉。
+   */
+  const isCoarsePointer = window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  const showSettings = !isCoarsePointer || isFullscreen
+
+  // 迷你/画中画模式下不应残留打开的面板；小窗没有设置入口时也要立刻回收
   useEffect(() => {
-    if (state.mini || state.pip) {
+    if (state.mini || state.pip || !showSettings) {
       onSettingOpenChange(false)
     }
-  }, [onSettingOpenChange, state.mini, state.pip])
+  }, [onSettingOpenChange, showSettings, state.mini, state.pip])
 
   /** 面板打开时，点击控制条内面板以外的区域收起（点击画面收起由上层画面单击处理） */
   const handleControlsAreaClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -378,9 +390,6 @@ export function PlayerControls({
 
   if (!art || !state.ready) return null
   if (state.mini || state.pip) return null
-
-  const isMobile = isTouchDevice()
-  const isFullscreen = state.fullscreen || state.fullscreenWeb
 
   const handleSeek = (time: number) => {
     art.seek = time
@@ -512,22 +521,24 @@ export function PlayerControls({
             </ControlButton>
           )}
 
-          <ControlButton
-            label="设置"
-            active={settingOpen}
-            solidIcon={settingOpen}
-            onClick={() => onSettingOpenChange(!settingOpen)}
-          >
-            <Settings className="size-5" />
-          </ControlButton>
+          {showSettings && (
+            <ControlButton
+              label="设置"
+              active={settingOpen}
+              solidIcon={settingOpen}
+              onClick={() => onSettingOpenChange(!settingOpen)}
+            >
+              <Settings className="size-5" />
+            </ControlButton>
+          )}
 
           <ControlButton label="全屏" onClick={toggleFullscreen}>
             {isFullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}
           </ControlButton>
           </div>
 
-          {/* 设置面板：紧贴进度条上沿展开 */}
-          {settingOpen && (
+          {/* 设置面板：紧贴进度条上沿展开（仅桌面 / 手机全屏，小窗高度放不下） */}
+          {showSettings && settingOpen && (
             <SettingsPanel art={art} isLoopEnabled={isLoopEnabled} panelRef={settingsPanelRef} />
           )}
         </div>
